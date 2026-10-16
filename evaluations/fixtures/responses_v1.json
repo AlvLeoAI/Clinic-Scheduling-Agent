@@ -1,0 +1,53 @@
+{
+  "version": "1.0.0",
+  "synthetic": true,
+  "tool": {
+    "id": "resp_synthetic_tool",
+    "object": "response",
+    "status": "completed",
+    "model": "synthetic-protocol-model",
+    "output": [
+      {
+        "id": "rs_synthetic",
+        "type": "reasoning",
+        "summary": [],
+        "encrypted_content": "opaque-synthetic-context"
+      },
+      {
+        "id": "fc_synthetic",
+        "type": "function_call",
+        "call_id": "call_synthetic_01",
+        "name": "check_availability",
+        "arguments": "{\"local_date\": \"2030-01-09\", \"practitioner_id\": \"00000000-0000-4000-8000-000000000101\", \"appointment_type_id\": \"00000000-0000-4000-8000-000000000201\"}",
+        "status": "completed"
+      }
+    ],
+    "usage": {
+      "input_tokens": 20,
+      "output_tokens": 10,
+      "total_tokens": 30
+    }
+  },
+  "final": {
+    "id": "resp_synthetic_final",
+    "object": "response",
+    "status": "completed",
+    "model": "synthetic-protocol-model",
+    "output": [
+      {
+        "id": "msg_synthetic",
+        "type": "message",
+        "role": "assistant",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "{\"kind\": \"availability\", \"missing_fields\": []}",
+            "annotations": []
+          }
+        ]
+      }
+    ],
+    "usage": null
+  }
+}

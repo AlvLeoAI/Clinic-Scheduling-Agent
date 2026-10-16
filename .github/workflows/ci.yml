@@ -1,0 +1,66 @@
+name: Offline backend and agent safety
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+        env:
+          POSTGRES_USER: clinic_demo
+          POSTGRES_PASSWORD: ci-synthetic-only
+          POSTGRES_DB: clinic_scheduling_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clinic_demo -d clinic_scheduling_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:5432/clinic_scheduling_test
+      TEST_DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:5432/clinic_scheduling_test
+      ENABLE_LIVE_OPENAI: 'false'
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: ''
+      CLINIC_BOOKING_EVIDENCE_FILE: M6_booking_regression_cases.json
+      CLINIC_AGENT_EVIDENCE_FILE: M6_m4_regression_cases.json
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12.3'
+      - name: Install pinned runtime and test dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-foundation.lock
+      - name: Current-tree secrets and synthetic fixtures
+        run: .venv/bin/python -m scripts.check_synthetic
+      - name: Ruff
+        run: |
+          .venv/bin/ruff check app cli scripts alembic tests evaluations
+          .venv/bin/ruff format --check app cli scripts alembic tests evaluations
+      - name: PostgreSQL migrations and parity
+        run: |
+          .venv/bin/alembic upgrade head
+          .venv/bin/alembic check
+          .venv/bin/alembic current
+      - name: Full regression including PostgreSQL, offline agent and grader controls
+        run: .venv/bin/pytest -q
+      - name: Offline case report without changing accepted evidence
+        run: .venv/bin/python -m evaluations.runner --output-dir test-results/ci/evals
+      - name: Controlled concurrency and lost-response CLI demo
+        run: |
+          .venv/bin/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/ci/concurrency.json
+          .venv/bin/python -m cli --synthetic-only --scripted --evidence test-results/ci/cli.json
+      - name: API and documentation consistency
+        run: .venv/bin/python -m scripts.check_docs

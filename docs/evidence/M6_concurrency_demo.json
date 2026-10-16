@@ -1,0 +1,97 @@
+{
+  "status": "PASS",
+  "database": "clinic_scheduling_test",
+  "clock": "2030-01-07T15:00:00+00:00",
+  "independent_clients": 2,
+  "confirmation_backend_pids": [
+    609152,
+    609151
+  ],
+  "verification_backend_pid": 609160,
+  "responses": [
+    201,
+    409
+  ],
+  "conflict": {
+    "sqlstate": "23P01",
+    "constraint": "appointments_no_overlap"
+  },
+  "appointment_count_verified": 1,
+  "appointment": {
+    "id": "05f5eee8-c6e9-40de-a547-90fbbe9dc18a",
+    "practitioner_id": "00000000-0000-4000-8000-000000000101",
+    "starts_at": "2030-01-09T15:00:00+00:00",
+    "ends_at": "2030-01-09T16:00:00+00:00"
+  },
+  "proposal_states": {
+    "e097f842-e410-4a79-a927-331d9733b2ca": "CONFIRMED",
+    "072fdad3-577b-42c6-b613-1e09ae2c1ddf": "CONFLICTED"
+  },
+  "same_key_replays_byte_identical": true,
+  "alternative_slots_verified": [
+    {
+      "starts_at": "2030-01-09T10:00:00-06:00",
+      "ends_at": "2030-01-09T10:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T10:30:00-06:00",
+      "ends_at": "2030-01-09T11:00:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T11:00:00-06:00",
+      "ends_at": "2030-01-09T11:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T11:30:00-06:00",
+      "ends_at": "2030-01-09T12:00:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T12:00:00-06:00",
+      "ends_at": "2030-01-09T12:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T12:30:00-06:00",
+      "ends_at": "2030-01-09T13:00:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T13:00:00-06:00",
+      "ends_at": "2030-01-09T13:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T13:30:00-06:00",
+      "ends_at": "2030-01-09T14:00:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T14:00:00-06:00",
+      "ends_at": "2030-01-09T14:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T14:30:00-06:00",
+      "ends_at": "2030-01-09T15:00:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T15:00:00-06:00",
+      "ends_at": "2030-01-09T15:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T15:30:00-06:00",
+      "ends_at": "2030-01-09T16:00:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T16:00:00-06:00",
+      "ends_at": "2030-01-09T16:30:00-06:00"
+    },
+    {
+      "starts_at": "2030-01-09T16:30:00-06:00",
+      "ends_at": "2030-01-09T17:00:00-06:00"
+    }
+  ],
+  "trace_ids": [
+    "2e261beb-1751-4ad8-9e7f-dd9c1a834fb5",
+    "ac7c4bfe-224b-4d23-b3d3-27ecb3f6db9a"
+  ],
+  "live_provider_calls": 0,
+  "global_reset": false,
+  "transient_demo_rows": true,
+  "owned_rows_cleaned": true
+}

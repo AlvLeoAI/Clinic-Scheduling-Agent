@@ -1,0 +1,22 @@
+name: clinic-scheduling-agent
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+    pull_policy: never
+    environment:
+      POSTGRES_USER: clinic_demo
+      POSTGRES_DB: clinic_scheduling_dev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a local demo password in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15432}:5432"
+    volumes:
+      - m1_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/001-test-db.sh:/docker-entrypoint-initdb.d/001-test-db.sh:ro
+    command: ["postgres", "-c", "log_statement=none", "-c", "log_min_error_statement=panic"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic_demo -d clinic_scheduling_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+volumes:
+  m1_postgres_data:

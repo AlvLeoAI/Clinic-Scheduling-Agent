@@ -1,0 +1,8 @@
+{
+  "_migration_status": "RETIRED",
+  "_notice": "Legacy appointment data removed during M0 due to uncertain provenance. Not an active synthetic seed. See docs/security/M0_SYNTHETIC_SEED_SPEC.md.",
+  "appointment_types": [],
+  "available_slots": {},
+  "booked_appointments": [],
+  "scheduling_rules": {}
+}
