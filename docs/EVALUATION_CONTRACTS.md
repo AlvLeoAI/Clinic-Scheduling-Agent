@@ -1,8 +1,8 @@
 # Versioned evaluation contracts
 
-Select **1.0** for historical grammar or **1.1** for the R2C.1 quality candidate.
-Both runner APIs accept `evaluation_contract="1.1"` and both CLIs accept
-`--evaluation-contract 1.1`. The default remains 1.0; there is no content-based
+Select **1.0** or **1.1** for their frozen historical contracts, or **1.2** for current proposal-grounding verification. See the exact [v1.2 specification](EVALUATION_CONTRACT_V1_2.md).
+Both runner APIs accept `evaluation_contract="1.2"` and both CLIs accept
+`--evaluation-contract 1.2`. The default remains 1.0; there is no content-based
 fallback or automatic version upgrade. Unknown versions fail before case/database
 effects. Each report records its contract, scorer version, ordered source list and
 SHA-256 fingerprint. Dataset, application prompt, tool-schema and scorer versions
@@ -11,7 +11,7 @@ are separate identities.
 The original `graders.py`, `live_graders.py` and independent `oracle.py` are frozen.
 Original S1–S5 live verdicts and private reports are never regraded or overwritten.
 Legacy grader tests keep their original fixtures and imports. Tests of the current
-application use explicit 1.1; the mocked R2 integration test also asserts 1.0's
+application use explicit 1.2; the mocked R2 integration test also asserts 1.0's
 specific S2 incompatibility. These are different contracts, not expected-failure
 markers hiding an application error.
 
@@ -55,16 +55,32 @@ that endpoint without reassigning the host's existing R2 port.
 
 ```bash
 .venv/bin/pytest -q -p tests.r2a_offline_guard
-.venv/bin/python -m evaluations.runner --evaluation-contract 1.1 --output-dir test-results/contract-1.1
-.venv/bin/python -m evaluations.live_runner --dry-run --evaluation-contract 1.1 --output-dir .local/contract-1.1
+.venv/bin/python -m evaluations.runner --evaluation-contract 1.2 --output-dir test-results/contract-1.2
+.venv/bin/python -m evaluations.live_runner --dry-run --evaluation-contract 1.2 --output-dir .local/contract-1.2
 ```
 
 Use separate output directories for explicit 1.0 compatibility runs. The current
 application's new wording is expected to fail the old availability grammar;
-report that result independently of 1.1 correctness. CI explicitly selects 1.1
+report that result independently of 1.1 correctness. CI now explicitly selects 1.2
 for current application evaluations. Raw snapshots and operational evidence stay private. The source tree contains only reviewed aggregate live summaries and component hashes, never raw private execution records or credentials.
 
 R2C.2 S2 and S5 each completed one separately authorized live regression with all three layers PASS; see [preserved results](LIVE_EVALUATION_REPORT.md). Any further paid retest needs fresh source/prompt/
 schema/dataset/contract fingerprints, explicit scenario selection and owner opt-in,
 reviewed provider compatibility/pricing and existing request/token/cost limits.
 No paid request or live experiment is authorized by this contract document.
+
+## Contract 1.2 and historical compatibility
+
+The v1.0/v1.1 grader modules and fixtures remain byte-for-byte preserved. The shared
+version dispatcher now offers 1.2. Because 1.1's composite fingerprint includes that
+dispatcher, a newly calculated composite hash changes even though its grader modules
+are unchanged; original execution manifests retain the original hashes. New reports
+record all source dependencies, contract-document and independent control hashes.
+
+The new finite grammar distinguishes current results, previous recoverable state,
+validated failures and absence. A raw proposal plan after a failed call still fails
+raw evaluation. Safe rendering can pass backend/visible layers independently. The
+observer records turn and client-message identities for exact call/output correlation;
+these are private evidence fields, not new public API fields. No historical live
+execution is regraded. Complete current verification and compatibility results are
+reported separately in [testing](../TESTING.md).

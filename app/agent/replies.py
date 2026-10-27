@@ -1,5 +1,6 @@
 """The model selects a reply plan; generated prose never becomes a booking fact."""
 
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -81,12 +82,58 @@ def proposal_view(db, session_id, trace_id, clock, *, proposal_id=None):
     return snapshot
 
 
-def render_reply(plan, db, session_id, turn_id, trace_id, clock, rows, proposal):
-    if plan.kind == "confirmation_required":
-        return (
-            "Chat cannot confirm bookings. Review the proposal and use "
-            "the explicit confirmation endpoint."
+@dataclass(frozen=True)
+class ProposalGrounding:
+    """Internal provenance only; the public response and booking contract stay unchanged."""
+
+    proposal: ProposalResponse | None
+    current_result: bool
+    failed_code: str | None
+
+
+def render_reply(plan, db, session_id, turn_id, trace_id, clock, rows, grounding):
+    proposal = grounding.proposal
+    text = _render_primary(
+        plan,
+        db,
+        session_id,
+        turn_id,
+        trace_id,
+        clock,
+        rows,
+        proposal if grounding.current_result else None,
+        has_proposal=proposal is not None,
+    )
+    if grounding.failed_code is not None:
+        text = (
+            f"The requested proposal operation did not succeed ({grounding.failed_code}). " + text
         )
+    if proposal is not None and not grounding.current_result:
+        text += (
+            f" Previous proposal {proposal.proposal_id} covers {proposal.starts_at.isoformat()} to "
+            f"{proposal.ends_at.isoformat()}. Check its current status below; this is previous "
+            "session state, not a result of this request. Only a PENDING proposal can be "
+            "submitted for separate explicit confirmation."
+        )
+    return text
+
+
+def _render_primary(
+    plan, db, session_id, turn_id, trace_id, clock, rows, proposal, *, has_proposal
+):
+    if plan.kind == "confirmation_required":
+        if has_proposal:
+            return (
+                "Chat cannot confirm bookings. Check the proposal's current status below. "
+                "Only if it is PENDING, review its details and use the explicit confirmation "
+                "endpoint. Otherwise request a new proposal."
+            )
+        return (
+            "Chat cannot confirm bookings. There is no pending proposal to review. "
+            "Request a booking proposal first, then use the explicit confirmation endpoint."
+        )
+    if plan.kind == "proposal" and proposal is None:
+        return "A proposal result was not established for this request."
     if plan.kind == "out_of_scope":
         return (
             "This synthetic demo handles scheduling only. It cannot provide "

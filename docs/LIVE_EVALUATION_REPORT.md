@@ -43,7 +43,7 @@ S2's original visible PASS covered frozen grounding/authorization criteria, whil
 
 **R2C.1:** instructions/schema descriptions specify that only clarify may have nonempty missing_fields. Pydantic rejects invalid combinations rather than clearing them; safe 503 handling does not claim success. Separately, deterministic availability rendering invites interval selection and a proposal, with explicit confirmation still required. R2C.1 initially had 545 passing and four failing tests: approved wording no longer matched frozen grammar.
 
-**R2C.1b:** all four failures were reconciled against exact interval/tool/DB evidence, then contract 1.1 was introduced separately. Historical 1.0 implementation, fixtures and scores remain frozen. Version 1.1 checks complete canonical wording, every interval and its catalog metadata against independent evidence, proposal ownership/confirmation provenance and raw semantic validity. It does not use permissive substring matching or let safe rendering convert raw FAIL to PASS. The default remains 1.0; new runs select 1.1 explicitly. The accepted local suite passed 616 tests, with 25 historical-control tests and 52 v1.1 controls (45 adversarial, seven other controls). Current wording intentionally still fails the old availability grammar.
+**R2C.1b:** all four failures were reconciled against exact interval/tool/DB evidence, then contract 1.1 was introduced separately. Historical 1.0 implementation, fixtures and scores remain frozen. Version 1.1 checks complete canonical wording, every interval and its catalog metadata against independent evidence, proposal ownership/confirmation provenance and raw semantic validity. It does not use permissive substring matching or let safe rendering convert raw FAIL to PASS. At that stage the default remained 1.0 and new runs selected 1.1 explicitly. The accepted local suite passed 616 tests, with 25 historical-control tests and 52 v1.1 controls (45 adversarial, seven other controls). Current wording intentionally still fails the old availability grammar.
 
 **Observed R2C.2 regressions:** S2 passed all layers and showed correct deterministic next-step guidance (UX-001). S5 returned confirmation_required with missing_fields=[], zero tools and zero proposals/appointments; all layers passed (AGENT-001). Each was one separately authorized sample. Invalid metadata remains detectable as raw FAIL in offline actual-runner mocks, even if another backend path could produce safe text.
 
@@ -82,11 +82,19 @@ Private frozen manifests retain exact execution timestamps, full source inventor
 ## Remaining limits and prioritized follow-up
 
 1. **P0 historical privacy/security:** unresolved before any public release. Clean-root history and private quarantine do not erase old exposure.
-2. **Current hosted verification:** R1C's real Actions success ran 378 tests at `6521b87`; latest uncommitted R2 source has local 616-test evidence only. A separately approved source snapshot, hosted run and fresh-clone verification are still needed.
+2. **Hosted verification:** R1C ran 378 tests at `6521b87`; R3B subsequently ran 616 at `9b0c0df` and passed fresh-clone verification. The newer uncommitted R3C.1b correction has local offline verification only.
 3. **PERF-001:** S4's single provider call took 22.597177 seconds. No latency SLO, repeated sample, tail distribution or root cause is established. S2's later run was also slower than its original; successful output does not resolve performance concerns.
-4. **Failure-path UX:** failed-tool proposal grounding and “review the proposal” wording when none exists remain separate observations. Any repair needs versioned contracts and negative controls.
+4. **Failure-path UX:** R3C.1 reproduced stale-proposal grounding and nonexistent-proposal review guidance. R3C.1b supplies a separately versioned offline v1.2 repair with independent negative controls. No new live sample validates it; all original scores and hashes below remain historical.
 5. **Benchmark design:** after owner approval, preregister repeated samples, scenario families, model/config hashes, expected safe failures and latency/cost reporting. Separate held-out paraphrases, ambiguity, catalog resolution, adversarial confirmation and provider failures. Preserve raw/backend/visible outcomes and failed runs; compare configurations only within declared cohorts. Do not execute this proposal without separate authorization.
 
 Five heterogeneous scenarios and eight total executions cannot establish statistical reliability, general clinical safety or causal attribution to any single change. S3 used different tool schemas; S2/S5 regressions also changed prompt/ReplyPlan/renderer/grader contracts. Deterministic text limits what can be inferred about model-authored communication. Fixed synthetic dates/catalog and narrow English response grammars do not represent real patient traffic. A valid S5 run does not exercise live invalid-plan rejection or a pending-proposal transition. No production load, clinical-system integration or regulatory validation is claimed.
 
 See [evaluation contracts](EVALUATION_CONTRACTS.md), [architecture](../SYSTEM_DESIGN.md), [test evidence scopes](../TESTING.md) and [release checklist](RELEASE_READINESS.md). Public release remains BLOCKED; no additional live run is authorized.
+
+## Subsequent offline correction
+
+R3C.1b changes failure-path rendering and adds v1.2 provenance grading without
+altering this historical execution matrix, telemetry or component-hash table.
+Original S3 and S5 failures and the separately authorized retests remain unchanged.
+There are still eight live executions; v1.2 has no live-model evidence. See
+[the current offline contract](EVALUATION_CONTRACT_V1_2.md) and [testing](../TESTING.md).

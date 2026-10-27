@@ -114,7 +114,8 @@ def main():
                     "acceptance_rows": 12,
                     "m5_reconciliation": reconciliation["status"],
                     "raw_layers": reconciliation["raw_layers"],
-                    "hosted_ci": "NOT RUN",
+                    "hosted_ci_query": "NOT QUERIED BY THIS LOCAL CHECK",
+                    "hosted_ci_evidence": "See TESTING.md for commit-scoped historical receipts",
                     "release_gate": "BLOCKED",
                 }
             )

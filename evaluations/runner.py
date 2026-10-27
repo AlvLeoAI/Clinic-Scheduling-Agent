@@ -140,7 +140,13 @@ class FixtureProvider:
                 "raw_text",
                 {"kind": step.get("reply"), "missing_fields": step.get("missing_fields", [])},
             )
-            self.raw_plans.append({"session": alias, "value": copy.deepcopy(value)})
+            self.raw_plans.append(
+                {
+                    "session": alias,
+                    "value": copy.deepcopy(value),
+                    "client_message_id": self.message_ids[(alias, latest)],
+                }
+            )
             value = value if isinstance(value, str) else json.dumps(value)
             output = [
                 {
@@ -294,6 +300,7 @@ class CaseRun:
             "status": response.status_code,
             "body": body,
             "phase": phase,
+            "client_message_id": str(ident),
             "snapshot": self.snapshot(),
         }
         self.responses.append(evidence)
@@ -306,15 +313,18 @@ class CaseRun:
                 .where(ConversationItem.session_id.in_([UUID(v) for v in self.ids.values()]))
                 .order_by(ConversationItem.created_at, ConversationItem.sequence)
             ).all()
-            calls = {r.call_id: r.payload for r in rows if r.item_type == "function_call"}
+            calls = {
+                (r.turn_id, r.call_id): r.payload for r in rows if r.item_type == "function_call"
+            }
             outputs = [
                 {
                     "session": next(
                         alias for alias, ident in self.ids.items() if ident == str(r.session_id)
                     ),
-                    "name": calls[r.call_id]["name"],
-                    "arguments": json.loads(calls[r.call_id]["arguments"]),
+                    "name": calls[(r.turn_id, r.call_id)]["name"],
+                    "arguments": json.loads(calls[(r.turn_id, r.call_id)]["arguments"]),
                     "call_id": r.call_id,
+                    "turn_id": str(r.turn_id),
                     "value": json.loads(r.payload["output"]),
                 }
                 for r in rows

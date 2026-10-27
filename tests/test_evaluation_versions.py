@@ -40,7 +40,7 @@ def test_historical_scorer_fingerprint_is_unchanged():
     }
 
 
-@pytest.mark.parametrize("version", [None, "", "1", "v1.1", "1.2", "latest", False])
+@pytest.mark.parametrize("version", [None, "", "1", "v1.1", "1.3", "latest", False])
 def test_unknown_contract_fails_before_case_database_or_provider(version):
     with pytest.raises(ValueError):
         select_contract(version)
@@ -124,3 +124,18 @@ def test_v11_runner_retains_raw_semantic_failure_through_actual_mocked_transport
     assert case["evidence"]["final"]["proposals"] == []
     assert case["evidence"]["explicit_confirmations"] == []
     assert result["database_unchanged_after_scoped_cleanup"]
+
+
+def test_v12_dispatch_and_fingerprints_are_separate_from_historical_contracts():
+    from evaluations import graders_v1_1, graders_v1_2, live_graders_v1_1, live_graders_v1_2
+
+    assert select_contract("1.1") == (graders_v1_1.grade, live_graders_v1_1.grade_smoke)
+    assert select_contract("1.2") == (graders_v1_2.grade, live_graders_v1_2.grade_smoke)
+    current = contract_metadata("1.2", smoke=True)
+    assert current["scorer_version"] == "r2-layered-1.2.0"
+    assert current["scorer_sha256"] != contract_metadata("1.1", smoke=True)["scorer_sha256"]
+    for key, path in (
+        ("contract_document_sha256", "docs/EVALUATION_CONTRACT_V1_2.md"),
+        ("control_fixture_sha256", "tests/test_graders_v1_2.py"),
+    ):
+        assert current[key] == hashlib.sha256((runner.ROOT / path).read_bytes()).hexdigest()

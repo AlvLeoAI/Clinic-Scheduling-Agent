@@ -11,7 +11,13 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.agent.context import ContextLimit, selected_context, serialized_chars
 from app.agent.protocol import MAX_TOOL_CALLS, ProtocolFailure, ProviderFailure, ProviderResponse
-from app.agent.replies import ReplyPlan, proposal_view, render_reply, reply_format
+from app.agent.replies import (
+    ProposalGrounding,
+    ReplyPlan,
+    proposal_view,
+    render_reply,
+    reply_format,
+)
 from app.agent.tools import (
     TOOL_NAMES,
     execute_tool,
@@ -58,6 +64,7 @@ class ChatService:
         )
 
     def _proposal_for_turn(self, db, lease, rows):
+        current, failed_code = None, None
         for call in rows:
             if (
                 call.item_type != "function_call"
@@ -72,17 +79,24 @@ class ChatService:
                 ),
                 None,
             )
-            if output is not None:
-                value = json.loads(output.payload["output"])
-                if value.get("ok"):
-                    return proposal_view(
-                        db,
-                        lease.session_id,
-                        lease.trace_id,
-                        self.clock,
-                        proposal_id=UUID(value["data"]["proposal_id"]),
-                    )
-        return proposal_view(db, lease.session_id, lease.trace_id, self.clock)
+            if output is None:
+                continue
+            value = validate_result("create_booking_proposal", json.loads(output.payload["output"]))
+            if value["ok"]:
+                current = proposal_view(
+                    db,
+                    lease.session_id,
+                    lease.trace_id,
+                    self.clock,
+                    proposal_id=UUID(value["data"]["proposal_id"]),
+                )
+            else:
+                failed_code = value["error"]["code"]
+        return ProposalGrounding(
+            proposal=current or proposal_view(db, lease.session_id, lease.trace_id, self.clock),
+            current_result=current is not None,
+            failed_code=failed_code,
+        )
 
     def _refresh_completed(self, session_id, body):
         response = ChatResponse.model_validate(body)
@@ -228,7 +242,7 @@ class ChatService:
         with self.store.transaction() as db:
             self.store.guard(db, lease)
             rows = self.store.rows(db, lease)
-            proposal = self._proposal_for_turn(db, lease, rows)
+            grounding = self._proposal_for_turn(db, lease, rows)
             message = render_reply(
                 plan,
                 db,
@@ -237,12 +251,12 @@ class ChatService:
                 lease.trace_id,
                 self.clock,
                 rows,
-                proposal,
+                grounding,
             )
             body = ChatResponse(
                 turn_id=lease.turn_id,
                 assistant_message=message,
-                proposal=proposal,
+                proposal=grounding.proposal,
                 trace_id=lease.trace_id,
             ).model_dump(mode="json")
             self.store.append(db, lease, "reply_plan", plan.model_dump(mode="json"))
@@ -253,11 +267,15 @@ class ChatService:
         self.store.fail(lease)
         with self.store.transaction() as db:
             rows = self.store.rows(db, lease)
-            proposal = self._proposal_for_turn(db, lease, rows)
+            grounding = self._proposal_for_turn(db, lease, rows)
+        if grounding.proposal is not None and not grounding.current_result:
+            message += (
+                " The attached proposal is previous session state, not a result of this request."
+            )
         body = ChatFailureResponse(
             error=ErrorDetail(code=code, message=message, retryable=retryable),
             turn_id=lease.turn_id,
-            proposal=proposal,
+            proposal=grounding.proposal,
             trace_id=lease.trace_id,
         )
         return status, body.model_dump(mode="json")

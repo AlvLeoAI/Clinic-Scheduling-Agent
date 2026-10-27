@@ -11,3 +11,10 @@ Operational application logs omit keys, bearers, raw messages, full tool argumen
 This is not clinical software, patient identity verification, EHR integration, production authentication/security, a retention/purge system, or a compliance certification. There is no cancellation/rescheduling, holiday calendar, multi-clinic tenancy, notification, deployment hardening or production load/crash guarantee. Privileged SQL can bypass service-level policy/immutability. Session expiry does not purge persisted conversations. HTTP loopback examples and local ephemeral databases do not imply encrypted public deployment.
 
 Any public release requires owner resolution of historical risk, scope/claim review and separate authorization. Live reliability claims additionally require separately authorized real evaluations; scripted fake-provider counts cannot support those claims. See [release checklist](RELEASE_READINESS.md).
+
+The legacy repository was private and archived at the historical cutover. Final
+R3B checks returned HTTP 404; the owner subsequently confirmed intentional removal.
+No current archive/visibility claim can be re-attested for that inaccessible
+repository. Deletion does not prove elimination of old exposure, third-party copies,
+audio or patient-like fixture provenance risks. Revocation/rotation remains an owner
+attestation, separate from current clean-root checks. P0 is still unresolved.

@@ -170,7 +170,7 @@ class SmokeProvider:
                         "name": item.get("name"),
                         "arguments": args,
                         "call_id": item.get("call_id"),
-                        "client_message_id": "single-smoke-turn",
+                        "client_message_id": next(reversed(self.message_ids.values()), None),
                     }
                 )
             elif item.get("type") == "message":
@@ -180,7 +180,13 @@ class SmokeProvider:
                         value = json.loads(value)
                     except (ValueError, TypeError):
                         pass
-                    self.raw_plans.append({"session": "A", "value": value})
+                    self.raw_plans.append(
+                        {
+                            "session": "A",
+                            "value": value,
+                            "client_message_id": next(reversed(self.message_ids.values()), None),
+                        }
+                    )
 
     def fixture(self, request):
         if not self.steps:

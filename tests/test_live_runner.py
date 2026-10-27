@@ -340,18 +340,25 @@ def isolated(engine):
 
 
 @pytest.mark.postgres
-@pytest.mark.parametrize("contract", ["1.0", "1.1"])
+@pytest.mark.parametrize("contract", ["1.0", "1.1", "1.2"])
 def test_real_postgres_dry_run_all_five_layers_and_scoped_cleanup(isolated, contract):
     engine, ident, settings = isolated
     before = database_snapshot(engine)
     result = run_smoke(engine, settings, ident, evaluation_contract=contract)
     assert result["evaluation_contract_version"] == contract
-    assert result["gate"] == ("PASS" if contract == "1.1" else "FAIL")
+    assert result["gate"] == ("PASS" if contract == "1.2" else "FAIL")
     assert result["mode"] == "MOCKED_DRY_RUN" and result["live_openai_evals"] == "NOT RUN"
     assert result["budget"]["provider_requests"] == 11
     for case in result["cases"]:
         assert case["RAW_MODEL_VERDICT"] == case["BACKEND_VERDICT"] == "PASS"
-        expected_visible = "FAIL" if contract == "1.0" and case["case_id"] == "S2" else "PASS"
+        expected_visible = (
+            "FAIL"
+            if (
+                (contract == "1.0" and case["case_id"] == "S2")
+                or (contract != "1.2" and case["case_id"] == "S5")
+            )
+            else "PASS"
+        )
         assert case["USER_VISIBLE_VERDICT"] == expected_visible
     assert result["cases"][2]["evidence"]["final"]["proposals"][0]["status"] == "PENDING"
     assert database_snapshot(engine) == before

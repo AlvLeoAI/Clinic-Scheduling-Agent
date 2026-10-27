@@ -23,3 +23,14 @@ Confirmation returns 201 only after committed booking/state/result. The client v
 Use the same key on network loss or retryable 503. A timeout establishes neither failure nor success. Cross-session/unknown resources are concealed as 404; expired bearer 401; expired proposal 410; superseded/conflicted 409; invalid ingress/policy 422. Policy-invalid live proposals retain PENDING; no new terminal state is invented.
 
 Completed chat replay keeps historical message/turn/trace but refreshes existing proposal status, so whole JSON may differ. In-progress same-session turns return 409 TURN_IN_PROGRESS; changed payload with same message UUID returns MESSAGE_ID_REUSED. Failed recoverable turns resume their journal under the original UUID. These chat semantics differ intentionally from exact M3 confirmation replay. See [agent/state review](M5_RECONCILIATION.md) and [operations](OPERATIONS.md).
+
+### Proposal provenance in chat
+
+The R3C.1b correction preserves the existing ChatResponse and ChatFailureResponse
+schemas. A successful current-turn correlated tool result may reuse an existing
+same-details proposal. An attached prior proposal is explicitly labeled as previous
+session state in assistant_message, or in error.message on an incomplete turn.
+Failed operations are described from validated recorded tool errors. Status remains
+a fresh backend projection on replay; prose is stable and confirmation instructions
+are conditional on PENDING. A proposal intent without a successful result does not
+claim creation. See [contract 1.2](EVALUATION_CONTRACT_V1_2.md).

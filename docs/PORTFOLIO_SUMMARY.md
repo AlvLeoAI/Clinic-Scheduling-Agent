@@ -6,7 +6,7 @@ Scheduling enforces Chicago business hours, a thirty-minute grid, thirty/sixty-m
 
 Persistent conversations use correlated tool outputs, short session leases and write fences. Strict tool contracts and semantic ReplyPlan validation constrain interpretation, while deterministic rendering uses authoritative backend facts. Tests and independent graders separate model choices, backend safety and user-visible correctness, including negative controls that intentionally inject errors.
 
-Real GPT-6 Luna smoke evaluations exposed a time-schema mismatch and incorrect confirmation metadata. Narrow, versioned repairs and separately authorized retests demonstrated the intended behavior in individual samples. Original failures remain visible. Latest accepted local regression: 616 tests; historical hosted CI: 378 tests at root `6521b87`. Newer R2 work has not been validated by hosted CI.
+Real GPT-6 Luna smoke evaluations exposed a time-schema mismatch and incorrect confirmation metadata. Narrow, versioned repairs and separately authorized retests demonstrated the intended behavior in individual samples. Original failures remain visible. Historical hosted CI passed 378 tests at root `6521b87` and 616 tests at `9b0c0df`. The current uncommitted v1.2 grounding correction has local offline verification only; see [testing](../TESTING.md).
 
 ## Architecture overview
 

@@ -129,6 +129,7 @@ def test_mocked_responses_transport_preserves_raw_failure_classification(isolate
         settings,
         ident,
         scenario="S5",
+        evaluation_contract="1.2",
         transport_factory=lambda _: httpx.MockTransport(transport),
     )
     case = report["cases"][0]

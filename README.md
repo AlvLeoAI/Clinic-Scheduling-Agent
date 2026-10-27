@@ -15,7 +15,12 @@ A synthetic text scheduling prototype built with FastAPI, PostgreSQL and validat
 
 The offline CLI uses a deterministic fake provider with an explicit command grammar. It demonstrates validated tool flow and backend enforcement, not natural-language model reliability. Real `gpt-6-luna` smoke evaluations cover catalog, availability, proposals, ambiguity and unauthorized confirmation. Original S3 and S5 raw failures remain separate from successful corrected retests; backend enforcement and visible results are graded independently. See the [consolidated evaluation report](docs/LIVE_EVALUATION_REPORT.md).
 
-Latest accepted local regression: **616 passed** under the explicitly versioned 1.1 evaluation contract. Historical hosted GitHub Actions ran **378 tests at `6521b87`**; it has not validated the newer uncommitted R2 work. This documentation update did not rerun the application suite.
+Historical hosted GitHub Actions passed **378 tests at root `6521b87`** and
+**616 tests at `9b0c0df`** ([R3B hosted run](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40437049577)).
+The current uncommitted grounding correction uses separately versioned **evaluation
+contract 1.2**, with **682 passing local offline tests**, reported in [testing](TESTING.md).
+Neither hosted run validates this newer working tree. Historical live GPT-6 Luna
+results retain their original contracts and scores.
 
 ## Local setup and demos
 
@@ -48,7 +53,7 @@ Confirmation bypasses the provider. A timeout is UNCERTAIN; retry the same comma
 - [Acceptance matrix](docs/ACCEPTANCE_MATRIX.md), [release checklist](docs/RELEASE_READINESS.md).
 - [M6 actual execution report](docs/evidence/M6_report.md), [accepted M5 evidence](docs/evidence/M5_report.md).
 
-R1A preservation and R1B independent Git-root preparation were completed. R1C validated private hosting, real hosted CI and a fresh remote clone of the approved root. R1D completed the private canonical-name cutover; the historical repository was quarantined and archived. These are preserved historical verifications, not fresh remote checks in R2D. The clean root does not resolve the historical P0 privacy/security issue.
+R1A preservation and R1B independent Git-root preparation were completed. R1C validated private hosting, real hosted CI and a fresh remote clone of the approved root. R1D completed the private canonical-name cutover; the historical repository was quarantined and archived at that time. It later returned HTTP 404, and the owner confirmed its intentional removal. These are preserved historical verifications, not fresh remote checks in R2D. The clean root does not resolve the historical P0 privacy/security issue.
 
 For a concise engineering overview and reproducible race demonstration, see the [portfolio summary](docs/PORTFOLIO_SUMMARY.md). [Reproducibility](docs/REPRODUCIBILITY.md) distinguishes the root-commit proof from the current working tree.
 
