@@ -1,17 +1,28 @@
 # Testing and evidence boundaries
 
-The source suite has recorded M0–M6 local acceptance. Its final original run was 378 passed, 0 failed, 0 skipped, with one inherited Starlette/httpx deprecation warning. These are historical results, not tests executed from this R1A candidate.
+| Evidence | Observed result | Scope |
+| --- | --- | --- |
+| M0–M6 / clean-root R1B reproduction | 378 passed | Historical local execution; original reports preserved |
+| R1C hosted GitHub Actions | 378 passed, 0 failed/skipped | Approved root `6521b87`; real PostgreSQL service, 24 original grader controls, offline cases and demos |
+| R1C remote fresh clone | PASS | Root-commit reproduction with independent storage/runtime/database |
+| R2C.1b full local suite | 616 passed, 0 failed/errors/skips, 5 warnings | Accepted uncommitted R2 source; isolated PostgreSQL and blocked real HTTP |
+| R2C.1b historical controls | 25 passed | 24 original controls plus the existing live-grader test |
+| R2C.1b v1.1 controls | 52 passed | 45 adversarial and seven positive/version/clarification controls |
+| R2C.2 preflight controls | 216 passed | Targeted offline controls; 46 PostgreSQL tests deselected in that command; separate mocked PostgreSQL checks recorded |
+| Current R2 code on hosted CI | NOT RUN | Hosted root evidence does not validate newer work |
 
-R1A permits static preparation only. Do not run application/database tests or demos until R1B is explicitly authorized. After authorization, use a disposable verification copy or later a genuine clean-root clone, a fresh venv, a new private environment, a unique Compose project/free port/new volume, and only its own synthetic test database. Clear inherited database/vendor settings. Never reuse original databases.
+R2D performs documentation, hash, link and current-tree security checks only. It does not rerun application/database tests, migrations or demos. See [live evaluation evidence](docs/LIVE_EVALUATION_REPORT.md) for separately authorized paid runs; no future live call is authorized here.
 
-Planned commands in that verification copy, after isolated setup:
+## Reproduce offline checks
+
+Use Python 3.12, the pinned lockfile and a new disposable synthetic PostgreSQL runtime following [operations](docs/OPERATIONS.md) and [R2 isolation](docs/AGENT_EVALUATION.md). The full suite includes a migration round trip that rebuilds its guarded schema: never run it against a database whose state must be preserved. Use a disposable verification copy and private output paths so generated regression ledgers cannot overwrite accepted evidence. Run stateful commands sequentially.
 
 ```bash
 CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
-CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json .venv/bin/pytest -q
-.venv/bin/python -m evaluations.runner --output-dir test-results/r1b/evals
-.venv/bin/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/r1b/concurrency.json
-.venv/bin/python -m cli --synthetic-only --scripted --evidence test-results/r1b/cli.json
+CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json .venv/bin/pytest -q -p tests.r2a_offline_guard
+.venv/bin/python -m evaluations.runner --evaluation-contract 1.1 --output-dir test-results/verification/evals
+.venv/bin/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/verification/concurrency.json
+.venv/bin/python -m cli --synthetic-only --scripted --evidence test-results/verification/cli.json
 .venv/bin/ruff check app cli scripts alembic tests evaluations
 .venv/bin/ruff format --check app cli scripts alembic tests evaluations
 .venv/bin/alembic check
@@ -20,10 +31,8 @@ CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json .venv/bin/pytest -q
 .venv/bin/python -m scripts.check_docs
 ```
 
-Run stateful commands sequentially. A retained migration test rebuilds only the guarded test schema. Pytest regression fixtures create M6-named evidence under docs/evidence in the disposable verification copy; do not copy these generated files back into the sealed candidate without review. Eval/demo flags above keep other output under ignored test-results.
+The HTTP-denial pytest plugin allows fakes, MockTransport and in-process TestClient, never real provider requests. Default pytest excludes agent_live. Collection is not execution. The live runner exists but requires explicit owner authorization, runtime opt-in and single-scenario selection.
 
-Unit tests do not connect to PostgreSQL; postgres requires it. api and agent_offline categories overlap; default pytest excludes reserved agent_live. No live runner exists. Collection alone is not execution. Record exact commands, exit codes, actual pass/fail/skip counts and warnings.
+Select contract **1.1 explicitly** for the current application. Historical 1.0 remains the default and is intentionally incompatible with new availability guidance: three M5 visible cases and R2 S2 fail its old finite grammar. Legacy tests retain frozen fixtures; this incompatibility is asserted rather than hidden. M5 v1.1 fixture results preserve 15 raw PASS / 9 intentionally bad raw FAIL / 1 absent-output NOT RUN, with 25 backend and 25 visible PASS. These are fixture dispositions, not model reliability.
 
-The retained .github/workflows/ci.yml uses pinned actions, PostgreSQL, migrations, Ruff, full tests including 24 grader controls, offline evaluations and both demos without vendor credentials. Local YAML/static review is distinct from hosted execution. Hosted CI and all fresh-clone verification remain NOT RUN.
-
-M5's 25 scripted cases preserve raw 15 PASS / 9 intentional FAIL / 1 NOT RUN separately from backend/visible 25 PASS each. See [provenance](docs/evidence/SYNTHETIC_PROVENANCE.md), [reconciliation](docs/M5_RECONCILIATION.md), [M6 historical extract](docs/evidence/M6_report.md), [operations](docs/OPERATIONS.md) and [release gates](docs/RELEASE_READINESS.md). Pattern checks cannot establish global privacy clearance.
+The unchanged scripts/check_docs checker validates links, OpenAPI and M5 evidence, but its printed hosted_ci=NOT RUN and M5 agent_live=NOT RUN are historical/static labels. They do not query GitHub or supersede R1C/live receipts. Do not interpret them as current execution status. [Release gates](docs/RELEASE_READINESS.md) separate all evidence scopes.

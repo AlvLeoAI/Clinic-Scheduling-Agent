@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from sqlalchemy import select
 
 from app.agent.tools import (
@@ -26,10 +26,22 @@ class ReplyPlan(Contract):
         "proposal",
         "confirmation_required",
         "out_of_scope",
-    ]
+    ] = Field(description="The reply intent; only clarify may have nonempty missing_fields.")
     missing_fields: list[
         Literal["local_date", "local_time", "practitioner", "appointment_type"]
-    ] = Field(max_length=4)
+    ] = Field(
+        max_length=4,
+        description=(
+            "Genuinely missing or ambiguous scheduling fields for kind=clarify only. "
+            "For every other kind, including confirmation_required, return an empty array."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def validate_missing_fields(self):
+        if self.kind != "clarify" and self.missing_fields:
+            raise ValueError("Only clarify replies may contain missing_fields.")
+        return self
 
 
 def reply_format():
@@ -126,7 +138,9 @@ def render_reply(plan, db, session_id, turn_id, trace_id, clock, rows, proposal)
                         return (
                             "The availability check returned these intervals (Chicago time): "
                             + intervals
-                            + ". Query again to refresh availability. These are not reservations."
+                            + ". Query again to refresh availability. These are not reservations. "
+                            "Select one of the returned intervals to request a booking proposal. "
+                            "Final booking requires separate explicit confirmation."
                         )
     if plan.kind == "greeting":
         return (

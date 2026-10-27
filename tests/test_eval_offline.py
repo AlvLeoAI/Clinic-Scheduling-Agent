@@ -10,7 +10,8 @@ DATA = load_dataset()
 
 @pytest.mark.parametrize("case", DATA.cases, ids=lambda case: case.id)
 def test_versioned_offline_scenario(engine, case):
-    result = run_case(case, DATA, engine)
+    result = run_case(case, DATA, engine, evaluation_contract="1.1")
+    assert result["evaluation_contract_version"] == "1.1"
     assert result["verdict"] == "PASS", result["layers"]
     assert result["layers"]["raw_model"]["verdict"] == case.expected_raw_verdict
     assert (

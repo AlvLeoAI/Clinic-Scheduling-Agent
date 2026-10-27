@@ -14,7 +14,7 @@ Base `/api/v1`. JSON/Pydantic contracts, UUID identifiers, RFC3339 offset-aware 
 | GET `/appointments/{id}` | Owning-session actual committed appointment. |
 | POST `/chat/messages` | UUID client_message_id + nonblank message ≤4000 chars; turn/message/trace and nullable authoritative proposal. |
 
-Run the documented server, then open `http://127.0.0.1:8000/docs` or fetch `/openapi.json`. The checked-in [snapshot](openapi.json) was exported and parity-checked in original M6, and is copied byte-for-byte into this candidate. Candidate runtime parity is NOT RUN in R1A and must be verified later. The inherited API title includes “foundation”; implemented routes/contracts are authoritative. Do not paste bearers into shared screenshots or logs.
+Run the documented server, then open `http://127.0.0.1:8000/docs` or fetch `/openapi.json`. The checked-in [snapshot](openapi.json) was exported and parity-checked in original M6, and is copied byte-for-byte into this candidate. Parity was subsequently checked in accepted verification and is rechecked by R2D documentation checks; this does not imply current hosted validation. The inherited API title includes “foundation”; implemented routes/contracts are authoritative. Do not paste bearers into shared screenshots or logs.
 
 Proposal fields include owner/clinic/practitioner/type IDs, duration, starts/ends, timezone, created/expiry/status and trace. Duration comes only from type. Full interval must fit Chicago weekdays 09:00–17:00, aligned every 30 minutes, with elapsed lead in inclusive [24 hours,90 days]. Missing/ambiguous scheduling parameters require clarification; the backend does not guess dates/practitioners/types.
 

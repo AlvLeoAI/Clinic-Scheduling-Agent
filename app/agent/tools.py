@@ -35,6 +35,18 @@ class AvailabilityArguments(Contract):
     appointment_type_id: UUID
 
 
+class ProposalArguments(Contract):
+    practitioner_id: UUID
+    appointment_type_id: UUID
+    local_date: Annotated[date, BeforeValidator(parse_local_date)]
+    local_time: str = Field(
+        strict=True,
+        min_length=5,
+        max_length=5,
+        pattern=r"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$",
+    )
+
+
 class ToolCatalog(Contract):
     clinic: ClinicCatalog
     practitioners: list[PractitionerCatalog] = Field(max_length=2)
@@ -84,7 +96,7 @@ def validate_result(name, value):
         raise ValueError("Tool result failed application validation.") from None
 
 
-INPUT_MODELS = dict(zip(TOOL_NAMES, (CatalogArguments, AvailabilityArguments, ProposalRequest)))
+INPUT_MODELS = dict(zip(TOOL_NAMES, (CatalogArguments, AvailabilityArguments, ProposalArguments)))
 
 
 def failure(code, message, retryable=False):
@@ -179,7 +191,8 @@ def execute_tool(name, arguments, db, session_id, turn_id, trace_id, clock):
                 trace_id=trace_id,
             )
         elif name == "create_booking_proposal":
-            outcome = BookingService(db, clock).create_proposal(session_id, arguments, trace_id)
+            request = ProposalRequest.model_validate(arguments.model_dump())
+            outcome = BookingService(db, clock).create_proposal(session_id, request, trace_id)
             snapshot = ProposalResponse.model_validate(outcome.body)
             if outcome.status == 201:
                 row = db.get(BookingProposal, snapshot.proposal_id)

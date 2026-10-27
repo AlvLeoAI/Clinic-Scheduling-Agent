@@ -1,11 +1,19 @@
-# Reproducibility and candidate provenance
+# Reproducibility and provenance
 
-This R1A candidate was constructed from an explicit reviewed working-tree file allowlist, not Git HEAD. It has no .git directory, environment file, venv, database volume or private CLI state. Original application, schema, migration, lock, tests and fixture bytes remain unchanged. Candidate-only documentation extracts are tracked in the private R1A publication manifest.
+R1A exported an explicit reviewed working-tree allowlist, not Git HEAD, while preserving the original workspace privately. R1B initialized an independent root commit `6521b87bb98317ca02dc0174f3399fe9790ecb77`, without historical Git objects. R1C pushed that root to a standalone private staging repository and verified actual hosted CI and a fresh remote clone. R1D renamed the clean repository to the canonical name, redirected legacy writers, and quarantined/archived the original repository privately. No history rewrite or historical ancestry import was used.
 
-Original M6 evidence records an isolated source-copy setup: new private environment/venv, offline cached pinned dependencies, fresh project/port/PostgreSQL volume, migrations, seed twice, 378 tests, offline evaluations and demos passed. This was not a Git clone. See the [historical M6 extract](evidence/M6_report.md).
+Those stages are completed historical evidence, not actions repeated in R2D. The current working tree includes later uncommitted R2 changes; the root SHA alone cannot identify their executed versions. Private per-file manifests and public component hashes in the [evaluation report](LIVE_EVALUATION_REPORT.md) distinguish them.
 
-R1A runtime/setup tests, local fresh clone, GitHub fresh clone and hosted Actions are NOT RUN. Later R1B must record actual execution from isolated resources after separate authorization. It must not inherit original DB URLs or reuse original databases. Package/image availability in a cold environment has not been established by cached M6 execution.
+| Reproduction | Proof |
+| --- | --- |
+| M6 source-copy setup | Historical 378-test run; not a Git clone |
+| R1B local fresh clone | Approved clean-root clone, isolated runtime and tests |
+| R1C hosted / remote fresh clone | Approved root, 378 tests and 24 grader controls, migrations, offline evaluations and demos |
+| R2C.1b current application | Local isolated source-copy run: 616 tests; no claim of current-tree hosted CI |
+| Current R2 fresh remote clone / hosted run | NOT RUN; requires separately approved source snapshot and submission |
 
-The retained scripts/reproduce_local.py may later exercise an isolated working-tree copy with its own random project and scoped cleanup. It is not a migration copier or fresh-clone verifier: it copies documentation directories and omits LICENSE from its temporary root-file selection. Its output must remain under ignored test-results and must not be redistributed as a release package. The actual release candidate retains the root MIT LICENSE.
+Future reproduction must use fresh private credentials, unique PostgreSQL storage and independent runtime, never original development data. R2 requires a dedicated test-only cluster at loopback port 15433 inside its verified runtime, with independently verified system identity. Stop if that endpoint belongs to an existing unidentified instance. Full tests include schema recreation and belong only in disposable verification environments. See [testing](../TESTING.md) and [runner isolation](AGENT_EVALUATION.md).
 
-No dependency download, provider call, Git initialization, clone, push or GitHub operation was performed for R1A. Publication remains [BLOCKED](RELEASE_READINESS.md), including unresolved historical privacy disposition and missing owner authorization.
+The retained scripts/reproduce_local.py exercises a working-tree copy, not a migration export or fresh-clone proof. It copies documentation directories and omits LICENSE from its temporary root-file selection; do not redistribute that temporary copy as a release package. The actual candidate retains MIT LICENSE. Cached dependencies/images in historical local runs do not prove cold offline availability.
+
+Private .env, runtime credentials, traces and development state are ignored and excluded from publication review. R2D freezes evidence hashes without copying raw private reports into the candidate. A clean root does not resolve the historical P0 risk; [public release remains BLOCKED](RELEASE_READINESS.md).

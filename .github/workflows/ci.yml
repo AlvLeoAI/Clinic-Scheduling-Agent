@@ -20,13 +20,13 @@ jobs:
           POSTGRES_PASSWORD: ci-synthetic-only
           POSTGRES_DB: clinic_scheduling_test
         ports:
-          - 5432:5432
+          - 127.0.0.1:15433:5432
         options: >-
           --health-cmd "pg_isready -U clinic_demo -d clinic_scheduling_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:5432/clinic_scheduling_test
-      TEST_DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:5432/clinic_scheduling_test
+      DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:15433/clinic_scheduling_test
+      TEST_DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:15433/clinic_scheduling_test
       ENABLE_LIVE_OPENAI: 'false'
       OPENAI_API_KEY: ''
       OPENAI_MODEL: ''
@@ -55,9 +55,9 @@ jobs:
           .venv/bin/alembic check
           .venv/bin/alembic current
       - name: Full regression including PostgreSQL, offline agent and grader controls
-        run: .venv/bin/pytest -q
+        run: .venv/bin/pytest -q -p tests.r2a_offline_guard
       - name: Offline case report without changing accepted evidence
-        run: .venv/bin/python -m evaluations.runner --output-dir test-results/ci/evals
+        run: .venv/bin/python -m evaluations.runner --evaluation-contract 1.1 --output-dir test-results/ci/evals
       - name: Controlled concurrency and lost-response CLI demo
         run: |
           .venv/bin/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/ci/concurrency.json

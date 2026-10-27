@@ -1,19 +1,25 @@
 # Release-readiness checklist
 
-**Public release gate: BLOCKED.** Owner acceptance of M0–M6 local technical gates and R1A preparation authorization do not authorize publication or Git operations.
+**Public release: BLOCKED (P0).** Repository remains PRIVATE; R2D authorizes documentation and evidence freeze only. No publication, deployment, Git commit/push or additional paid evaluation is authorized.
 
-| Check | Status | Required disposition |
+| Check | Status | Evidence boundary / next action |
 | --- | --- | --- |
-| Historical Git credential/audio/privacy exposure | BLOCKED / P0 | Owner disposition and audit. Clean-root preparation does not erase old clones, forks or caches. |
-| R1A owner acceptance | NOT RUN | Review the private preservation, publication manifest and R1A report. |
-| New Git root / initial commit | NOT RUN | Separate R1B authorization and ancestry/object-isolation checks. |
-| Runtime/setup from candidate | NOT RUN | Isolated resources and actual retained regression/evaluation/demo results. |
-| Local/GitHub fresh clone | NOT RUN | Actual clone proof, never a source-copy claim. |
-| Hosted GitHub Actions | NOT RUN | Local workflow exists; no hosted execution performed. |
-| GitHub migration, visibility or name cutover | NOT RUN | Separate owner authorization; original private repository unchanged. |
-| Public evidence and redistribution review | Pending owner acceptance | Public extracts and synthetic artifacts reviewed locally; MIT LICENSE preserved, dependency attribution not independently certified. |
-| Live model evaluations | NOT RUN | Separate approval/configuration; no reliability or cost claims from scripted fixtures. |
+| Historical Git credential/audio/privacy exposure | BLOCKED / P0 | Explicit owner disposition and audit remain required; a clean root cannot erase old objects, clones or caches |
+| R1A preservation and reviewed export | PASS | Accepted private manifests and source preservation |
+| R1B independent root | PASS | Root `6521b87`, no historical ancestry; historical verification |
+| R1C private hosted CI | PASS | 378 tests at `6521b87`, PostgreSQL, 24 original controls, offline evaluations and demos |
+| R1B local / R1C remote fresh clone | PASS | Approved root only, independent storage/runtime/test database |
+| R1D private cutover | PASS | Clean canonical repository; legacy private and archived; retained identity/ref/remote receipts |
+| Fresh remote visibility verification during R2D | NOT RUN | No remote settings/API operations; preserve private state |
+| Current R2 local regression | PASS | Accepted 616-test R2C.1b run, historical and v1.1 negative controls |
+| Current R2 hosted CI / fresh-clone reproduction | NOT RUN | New uncommitted source is outside hosted `6521b87` evidence |
+| R2B live evidence completeness | PASS | Six executions across five cases; original S3 FAIL/PASS/FAIL and S5 FAIL/PASS/PASS remain frozen |
+| R2C.2 S2 / S5 observed regressions | PASS | Separate contract 1.1 runs, each PASS/PASS/PASS; no reliability estimate |
+| R2D documentation and evidence freeze | PASS (local review) | Sanitized summaries and private hashes; owner acceptance pending |
+| PERF-001 / repeated-sample latency evidence | BLOCKED / NOT RUN | S4 took 22.597177 seconds; no statistical characterization or approved SLO |
+| Redistribution and final publication approval | BLOCKED | Owner content/security/licensing disposition and explicit authorization required |
+| Production, clinical or regulatory certification | NOT RUN | Outside this synthetic prototype's scope |
 
-This remains a synthetic local prototype with typed/template replies, bounded fixture grammar, character-based context accounting, per-phase provider timeout and buffered response bounds, no purge policy, same-session recovery only before expiry, and no production/load/OS-crash certification. No clinical, regulatory or production-readiness claim is made.
+Maturity: synthetic local demonstration prototype. Typed rendering, bounded fixture grammar, character-based context accounting, per-phase timeout, buffered response checks and session-expiry recovery remain limitations. There is no retention/purge policy or production load/OS-crash certification. PASS is limited to its stated proof and never waives the P0 blocker.
 
-The private R1A report and publication manifest are outside this candidate. Static content review does not clear these release gates. See [AC matrix](ACCEPTANCE_MATRIX.md), [security limits](SECURITY_PRIVACY.md) and [reproducibility](REPRODUCIBILITY.md).
+Original reports stay private and unchanged. Public-facing summaries contain no raw transcripts, operational identifiers or private evidence links. See [evaluation limitations](LIVE_EVALUATION_REPORT.md), [acceptance matrix](ACCEPTANCE_MATRIX.md), [security](SECURITY_PRIVACY.md) and [reproducibility](REPRODUCIBILITY.md).

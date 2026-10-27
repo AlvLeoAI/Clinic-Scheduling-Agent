@@ -44,8 +44,8 @@ from app.main import create_app
 from app.services.booking import BookingService
 from app.services.chat import INSTRUCTIONS
 from evaluations.contracts import Dataset
-from evaluations.graders import grade
 from evaluations.oracle import instant, slots
+from evaluations.scoring import CONTRACT_VERSIONS, contract_metadata, select_contract
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "evaluations/datasets/scheduling_v1.json"
@@ -494,7 +494,8 @@ class CaseRun:
             db.commit()
 
 
-def run_case(case, dataset, engine):
+def run_case(case, dataset, engine, *, evaluation_contract="1.0"):
+    grade, _ = select_contract(evaluation_contract)
     run = CaseRun(case, dataset, engine)
     try:
         with run.client() as client:
@@ -503,6 +504,7 @@ def run_case(case, dataset, engine):
             run.exercise(client)
             obs = run.observation(initial)
         result = grade(case, obs, dataset.catalog, dataset.clock)
+        result["evaluation_contract_version"] = evaluation_contract
         for response in run.provider.outputs:
             for item in response["output"]:
                 if item["type"] == "function_call":
@@ -552,14 +554,19 @@ def run_case(case, dataset, engine):
         run.cleanup()
 
 
-def run_dataset(engine):
+def run_dataset(engine, *, evaluation_contract="1.0"):
+    metadata = contract_metadata(evaluation_contract)
     dataset = load_dataset()
-    cases = [run_case(case, dataset, engine) for case in dataset.cases]
+    cases = [
+        run_case(case, dataset, engine, evaluation_contract=evaluation_contract)
+        for case in dataset.cases
+    ]
     layers = {
         name: dict(Counter(c["layers"][name]["verdict"] for c in cases))
         for name in ("raw_model", "backend", "user_visible")
     }
     return {
+        **metadata,
         "dataset_version": dataset.version,
         "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(),
         "prompt_version": dataset.prompt_version,
@@ -573,11 +580,7 @@ def run_dataset(engine):
         ),
         "prompt_source": "Instructions with fixed clock, tool definitions and strict reply schema.",
         "renderer_sha256": hashlib.sha256((ROOT / "app/agent/replies.py").read_bytes()).hexdigest(),
-        "grader_sha256": hashlib.sha256(
-            b"".join(
-                (ROOT / "evaluations" / name).read_bytes() for name in ("graders.py", "oracle.py")
-            )
-        ).hexdigest(),
+        "grader_sha256": metadata["scorer_sha256"],
         "clock": dataset.clock,
         "provider": {
             "kind": "httpx.MockTransport through unchanged Responses REST adapter",
@@ -612,6 +615,8 @@ def write_reports(result, directory):
         "",
         f"Dataset {result['dataset_version']}: `{result['dataset_sha256']}`",
         f"Prompt {result['prompt_version']}: `{result['prompt_sha256']}`",
+        f"Evaluation contract {result['evaluation_contract_version']}: "
+        f"{result['scorer_version']} / `{result['scorer_sha256']}`",
         "Provider: REST adapter + httpx.MockTransport; model synthetic-offline-m5; "
         "timeout 30s; actual token usage unavailable/null.",
         "AGENT LIVE EVALS: NOT RUN. No live runner is implemented.",
@@ -641,6 +646,7 @@ def main():
         description="Offline synthetic evaluations only; no live runner."
     )
     parser.add_argument("--output-dir", type=Path, default=ROOT / "docs/evidence")
+    parser.add_argument("--evaluation-contract", choices=CONTRACT_VERSIONS, default="1.0")
     args = parser.parse_args()
     settings = Settings()
     if settings.test_database_url is None:
@@ -653,7 +659,7 @@ def main():
         with engine.connect() as connection:
             config.attributes["connection"] = connection
             command.upgrade(config, "head")
-        result = run_dataset(engine)
+        result = run_dataset(engine, evaluation_contract=args.evaluation_contract)
         write_reports(result, args.output_dir)
         print(
             json.dumps(
