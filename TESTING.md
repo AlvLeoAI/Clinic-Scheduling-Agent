@@ -1,63 +1,94 @@
-# Testing and evidence boundaries
+# Testing
 
-| Evidence | Observed result | Scope |
-| --- | --- | --- |
-| M0–M6 / clean-root R1B reproduction | 378 passed | Historical local execution; original reports preserved |
-| R1C hosted GitHub Actions | 378 passed, 0 failed/skipped | Approved root `6521b87`; real PostgreSQL service, 24 original grader controls, offline cases and demos |
-| R1C remote fresh clone | PASS | Root-commit reproduction with independent storage/runtime/database |
-| R2C.1b full local suite | 616 passed, 0 failed/errors/skips, 5 warnings | Accepted R2 source, subsequently committed in `9b0c0df`; isolated PostgreSQL and blocked real HTTP |
-| R2C.1b historical controls | 25 passed | 24 original controls plus the existing live-grader test |
-| R2C.1b v1.1 controls | 52 passed | 45 adversarial and seven positive/version/clarification controls |
-| R2C.2 preflight controls | 216 passed | Targeted offline controls; 46 PostgreSQL tests deselected in that command; separate mocked PostgreSQL checks recorded |
-| R3B hosted GitHub Actions | 616 passed | Commit `9b0c0df`, [run 40437049577](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40437049577), actual PostgreSQL/offline execution |
-| R3B local and remote fresh clones | 616 passed in each | Independently isolated Git storage, runtime and PostgreSQL |
-| R3C.1b full local suite | 682 passed, 0 failed/errors/skips, 10 warnings | Isolated PostgreSQL, explicit v1.2, real HTTP blocked; 2026-10-27 |
-| R3C.2 precommit / local fresh clone / remote fresh clone | 682 passed in each, 10 warnings each | Exact accepted application content committed at `e1b572f`; independent Git storage, runtime and PostgreSQL |
-| R3C.2 hosted GitHub Actions | 682 passed, 1 warning in 35.30s | Commit `e1b572f`, [run 40516026765](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40516026765); all 16 steps succeeded, explicit v1.2 and real PostgreSQL |
-| R3D.2 documentation reconciliation | Local documentation review only | No full application suite, database operation or fresh hosted run; proposed edits are outside the verified commit |
+Current status is the CI badge in the [README](README.md). Every push runs the
+workflow in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) against a real
+PostgreSQL 16 service with live model access disabled.
 
-R2D performed documentation, hash, link and current-tree security checks only. R3B subsequently ran the full suite and demos on `9b0c0df`; R3C.2 did so on `e1b572f`. No live GPT-6 Luna run used v1.2. See [live evaluation evidence](docs/history/LIVE_EVALUATION_REPORT.md) for separately authorized paid runs and [current status](docs/history/CURRENT_STATUS.md) for later commit-scoped receipts; no future live call is authorized here.
+## Local database
 
-## Reproduce offline checks
-
-Use Python 3.12, the pinned lockfile and a new disposable synthetic PostgreSQL runtime following [operations](docs/history/OPERATIONS.md) and [R2 isolation](docs/history/AGENT_EVALUATION.md). The full suite includes a migration round trip that rebuilds its guarded schema: never run it against a database whose state must be preserved. Use a disposable verification copy and private output paths so generated regression ledgers cannot overwrite accepted evidence. Run stateful commands sequentially.
+All tests and demos use a dedicated local database. The guard in
+[`app/db/safety.py`](app/db/safety.py) refuses anything other than user `clinic_demo`
+on `127.0.0.1`/`localhost` with database `clinic_scheduling_test` (or
+`clinic_scheduling_dev` for the server). The full suite includes a migration round
+trip that rebuilds the schema, so use a disposable instance:
 
 ```bash
-CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
-CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json .venv/bin/pytest -q -p tests.r2a_offline_guard
-.venv/bin/python -m evaluations.runner --evaluation-contract 1.2 --output-dir test-results/verification/evals
-.venv/bin/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/verification/concurrency.json
-.venv/bin/python -m cli --synthetic-only --scripted --evidence test-results/verification/cli.json
-.venv/bin/ruff check app cli scripts alembic tests evaluations
-.venv/bin/ruff format --check app cli scripts alembic tests evaluations
-.venv/bin/alembic check
-.venv/bin/alembic current
-.venv/bin/python -m scripts.check_synthetic
-.venv/bin/python -m scripts.check_docs
+docker run -d --rm --name clinic-pg -p 127.0.0.1:15433:5432 \
+  -e POSTGRES_USER=clinic_demo -e POSTGRES_PASSWORD=localdemo \
+  -e POSTGRES_DB=clinic_scheduling_test postgres:16-alpine
+export DATABASE_URL=postgresql+psycopg://clinic_demo:localdemo@127.0.0.1:15433/clinic_scheduling_test
+export TEST_DATABASE_URL=$DATABASE_URL ENABLE_LIVE_OPENAI=false \
+  CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
+  CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
 ```
 
-The HTTP-denial pytest plugin allows fakes, MockTransport and in-process TestClient, never real provider requests. Default pytest excludes agent_live. Collection is not execution. The live runner exists but requires explicit owner authorization, runtime opt-in and single-scenario selection.
+Booking and chat tests write regression ledgers into `docs/evidence/`; the two
+`CLINIC_*_EVIDENCE_FILE` variables select the gitignored ledger names. Run database
+tests and demos one at a time, never concurrently.
 
-Select contract **1.2 explicitly** for current application verification. The default
-remains historical 1.0. Frozen v1.0/v1.1 implementation and fixture controls are
-retained; the current no-proposal confirmation wording intentionally fails both old
-grammars. Historical availability wording differs between 1.0 and 1.1 as before.
-These explicit compatibility checks do not rescore historical live records. M5
-fixture PASS can include an intentionally incorrect raw decision; report each layer
-separately. See [the v1.2 contract](docs/EVALUATION_CONTRACT_V1_2.md).
+## What CI runs
 
-The local `scripts/check_docs` checker validates links, OpenAPI and accepted M5
-evidence. Its `hosted_ci_query` is **NOT QUERIED BY THIS LOCAL CHECK**; commit-scoped
-hosted evidence is documented above from preserved R1C/R3B/R3C.2 receipts. The nested M5
-`agent_live=NOT RUN` applies only to that historical offline reconciliation.
-Historical security status is recorded in the README [Security history](README.md#security-history); see also the [release checklist](docs/history/RELEASE_READINESS.md).
+Run the same steps locally, in order:
 
-R3C.1b count reconciliation: the 616-test baseline is retained, plus 17 focused
-proposal-grounding cases (including seven first added in R3C.1), 47 independent
-v1.2 controls, one version-dispatch check and one additional mocked-runner contract
-parameter: **682 total**. The original four reproduction failures now pass. The
-first full attempt had 673 passes and one old-default-contract integration failure;
-explicit 1.2 selection corrected that test's version attribution without weakening
-its assertions. The final suite had ten warnings: one inherited Starlette/httpx
-deprecation and nine JUnit record_property warnings. Historical v1.0/v1.1 fixtures
-remain unchanged. None of these tests is a paid model execution.
+```bash
+.venv/bin/python -m scripts.check_synthetic                     # current-tree secrets and fixtures
+.venv/bin/ruff check app cli scripts alembic tests evaluations
+.venv/bin/ruff format --check app cli scripts alembic tests evaluations
+.venv/bin/alembic upgrade head && .venv/bin/alembic check       # migrations match models
+.venv/bin/pytest -q -p tests.r2a_offline_guard                  # full suite
+.venv/bin/python -m evaluations.runner --evaluation-contract 1.2 --output-dir test-results/evals
+.venv/bin/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/concurrency.json
+.venv/bin/python -m cli --synthetic-only --scripted --evidence test-results/cli.json
+.venv/bin/python -m scripts.check_docs                          # links, OpenAPI parity, doc rules
+```
+
+- `-p tests.r2a_offline_guard` patches `httpx` so any real HTTP request fails the run;
+  fakes, `MockTransport` and the in-process `TestClient` still work.
+- The evaluation runner defaults to the historical contract 1.0. Select
+  `--evaluation-contract 1.2` explicitly for the current application, and always pass
+  `--output-dir` so committed evidence is not overwritten.
+- `check_docs` verifies local links, that `docs/openapi.json` matches the app, the
+  committed offline evaluation reconciliation, the README Security history section,
+  and that current docs contain no release-gate or internal phase wording.
+
+## Test markers
+
+| Marker | Meaning |
+| --- | --- |
+| `unit` | Deterministic checks without PostgreSQL or a provider. |
+| `postgres` | Requires the local test database. |
+| `api` | HTTP contracts through the in-process client. |
+| `agent_offline` | Scripted or mocked provider, protocol and grader checks. |
+| `agent_live` | Reserved for opt-in live runs; excluded by default in `pyproject.toml`. |
+
+## Demos
+
+- **Concurrency** (`scripts/demo_concurrency.py`): two sessions with separate
+  connection pools request overlapping 60- and 30-minute slots for one practitioner. A
+  synchronization point makes PostgreSQL resolve a real race: one 201, one 409
+  `SLOT_TAKEN` from the exclusion constraint, verified through a third connection. It
+  refuses to run if the appointment table is not empty and deletes only its own rows.
+- **Scripted CLI** (`python -m cli --synthetic-only --scripted`): runs catalog,
+  availability and proposal through chat, then drops the HTTP response after a
+  committed confirmation, restarts the app and recovers the original result with the
+  same idempotency key.
+- **Interactive CLI** (`python -m cli --synthetic-only`): grammar `catalog`;
+  `availability DATE PRACTITIONER_UUID TYPE_UUID`; `propose DATE HH:MM PRACTITIONER_UUID
+  TYPE_UUID`; `confirm PROPOSAL_UUID`; `quit`. State is kept in the gitignored
+  `.local/cli_state.json` (mode 0600). After an uncertain confirmation, repeat the same
+  `confirm` with the same state to reuse its idempotency key.
+
+## Running the server
+
+```bash
+.venv/bin/alembic upgrade head
+.venv/bin/python -m scripts.seed
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log
+```
+
+Open `http://127.0.0.1:8000/docs`. Catalog, availability and booking work without any
+API key. With `ENABLE_LIVE_OPENAI=false` (the default), `POST /api/v1/chat/messages`
+returns 503 because no provider is configured; the CLI supplies its own scripted
+provider.
+
+Earlier verification receipts per commit are kept in [project history](docs/history/).
