@@ -1,4 +1,4 @@
-"""Current documentation, OpenAPI parity and accepted M5 evidence reconciliation."""
+"""Current documentation, OpenAPI parity and committed offline evaluation reconciliation."""
 
 import hashlib
 import json
@@ -8,10 +8,24 @@ from pathlib import Path
 from app.main import app
 
 ROOT = Path(__file__).resolve().parents[1]
-SUPERSEDED_MARKER = "> Superseded on "
+CURRENT_DOCS = (
+    "README.md",
+    "SYSTEM_DESIGN.md",
+    "TESTING.md",
+    "THIRD_PARTY_NOTICES.md",
+    "docs/API_DESIGN.md",
+    "docs/EVALUATION.md",
+    "docs/SECURITY_PRIVACY.md",
+)
 RELEASE_BLOCKED = re.compile(
     r"release[- ]blocker|\bP0\b|release (?:remains|is) blocked"
     r"|(?:public release|publication)[^.\n]{0,40}\bblocked\b|\|\s*BLOCKED\s*\|",
+    re.IGNORECASE,
+)
+# Internal phase labels and approval-process wording belong only in docs/history/.
+PHASE_JARGON = re.compile(
+    r"\b(?:R[1-3][A-E](?:\.\d+[a-z]?)?|M[0-6]|S[1-5])\b"
+    r"|owner acceptance|UNDECIDED|\battest|(?<!un)authori[sz](?:ed|es)\b",
     re.IGNORECASE,
 )
 INTENDED = {
@@ -76,9 +90,10 @@ def reconcile_m5():
 
 
 def current_documents(root=ROOT):
-    """Markdown documents that describe current state; superseded extracts are frozen."""
+    """Markdown outside docs/history/; history records are frozen and never gate CI."""
+    history = root / "docs/history"
     paths = sorted(root.glob("*.md")) + sorted((root / "docs").rglob("*.md"))
-    return [path for path in paths if SUPERSEDED_MARKER not in path.read_text()]
+    return [path for path in paths if not path.is_relative_to(history)]
 
 
 def check_release_status(root=ROOT):
@@ -95,25 +110,15 @@ def check_release_status(root=ROOT):
     return len(current_documents(root))
 
 
+def check_phase_jargon(root=ROOT):
+    flagged = [name for name in CURRENT_DOCS if PHASE_JARGON.search((root / name).read_text())]
+    assert not flagged, "Current documentation contains internal phase wording."
+    return len(CURRENT_DOCS)
+
+
 def main():
     try:
-        documents = [ROOT / name for name in ("README.md", "SYSTEM_DESIGN.md", "TESTING.md")]
-        documents += [
-            ROOT / "docs" / name
-            for name in (
-                "ADR_INDEX.md",
-                "DATA_MODEL.md",
-                "API_DESIGN.md",
-                "OPERATIONS.md",
-                "AGENT_EVALUATION.md",
-                "M5_RECONCILIATION.md",
-                "SECURITY_PRIVACY.md",
-                "ACCEPTANCE_MATRIX.md",
-                "RELEASE_READINESS.md",
-                "REPRODUCIBILITY.md",
-                "evidence/M6_report.md",
-            )
-        ]
+        documents = [ROOT / name for name in CURRENT_DOCS]
         links = 0
         for path in documents:
             for link in re.findall(r"\]\(([^)]+)\)", path.read_text()):
@@ -125,11 +130,8 @@ def main():
                 links += 1
         snapshot = json.loads((ROOT / "docs/openapi.json").read_text())
         assert snapshot == app.openapi() and len(snapshot["paths"]) == 9
-        matrix = (ROOT / "docs/ACCEPTANCE_MATRIX.md").read_text()
-        assert all(
-            len(re.findall(rf"\| AC-{number:02} \|", matrix)) == 1 for number in range(1, 13)
-        )
         current_docs = check_release_status()
+        jargon_docs = check_phase_jargon()
         reconciliation = reconcile_m5()
         print(
             json.dumps(
@@ -137,14 +139,14 @@ def main():
                     "status": "PASS",
                     "local_links_checked": links,
                     "openapi_operations": 9,
-                    "acceptance_rows": 12,
                     "m5_reconciliation": reconciliation["status"],
                     "raw_layers": reconciliation["raw_layers"],
                     "hosted_ci_query": "NOT QUERIED BY THIS LOCAL CHECK",
-                    "hosted_ci_evidence": "See TESTING.md for commit-scoped historical receipts",
+                    "hosted_ci_evidence": "See the CI badge in README.md",
                     "security_history": "PRESENT",
                     "current_docs_release_blocked": 0,
                     "current_docs_checked": current_docs,
+                    "phase_jargon_docs_checked": jargon_docs,
                 }
             )
         )
