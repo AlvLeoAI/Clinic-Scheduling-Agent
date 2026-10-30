@@ -37,16 +37,16 @@ No historical voice material or private report is authorized for redistribution.
 
 ## Source ownership and notices
 
-The existing MIT grant and `Copyright (c) 2025 Alvaro` notice are preserved
-unchanged. Original project material and third-party material have distinct
+The existing MIT grant is preserved. On 2026-10-30 the copyright notice was
+completed with the owner's full name: `Copyright (c) 2025 Alvaro Leopoldo Vazquez`. Original project material and third-party material have distinct
 rights holders. An owner source-provenance attestation is recorded privately;
 this is not independent verification of every contribution or a claim of exclusive
 ownership. Licensing sign-off was given on 2026-10-30. Any newly identified copied work,
 contributor right or contractual restriction requires specific review.
 
 The known incorporated Alembic template has its upstream notice in
-[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). No copyright holder or year is
-changed by this scope document. No repository-wide claim that all included material
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). The copyright year is
+unchanged. No repository-wide claim that all included material
 was authored exclusively by the project owner is made.
 
 ## Exact dependency reconciliation
