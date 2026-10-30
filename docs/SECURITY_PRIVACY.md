@@ -1,53 +1,76 @@
 # Security, privacy and limitations
 
-Historical security and licensing are closed; see the README [Security history](../README.md#security-history). The preserved [M0 risk register](history/security/M0_RISK_REGISTER.md) is a superseded historical extract. This document describes current controls and limitations; it does not authorize deployment to untrusted clients.
+This document describes current controls and known limitations. The history of the
+earlier credential exposure is in the README [Security history](../README.md#security-history).
 
-Current runtime/fixtures are generated from scratch: fictitious clinic/clinicians, synthetic visit types and UUIDs, no patient name/phone/reason fields. Legacy voice code, archives and booking JSON are not runtime sources. The current-tree pattern/provenance checker does not inspect or clear history, certify provenance of old audio, or prove absence of every possible secret. Known literal fake credentials used only with MockTransport are explicitly classified; unknown pattern candidates fail. Do not upload historical blobs as evidence.
+## Data
 
-Session bearers are 256-bit random opaque values; PostgreSQL stores only hashes. API ownership uses the bearer, not caller/model-supplied IDs. Tokens are issued once, expire after 24 hours and do not slide. CLI state contains credentials and idempotency/retry data: ignored, mode 0600, backend-scoped, atomically persisted, never exported. Keep `.env` private/ignored and use fresh local database passwords. CLI/API traces never substitute for authentication.
+All runtime data and fixtures are generated: a fictitious clinic and clinicians,
+synthetic visit types and UUIDs. The schema has no patient name, phone, email, date of
+birth or visit-reason fields. Sessions are anonymous.
 
-Operational application logs omit keys, bearers, raw messages, full tool arguments and SQL exception values; they correlate route/operation/status/trace/timing and observed provider usage. Curated demo transcripts intentionally contain only artificial scheduling commands and authoritative synthetic output. Raw reasoning and request headers are not exported. Sanitized historical live token counts and estimated costs are summarized in [the evaluation report](history/LIVE_EVALUATION_REPORT.md); raw execution artifacts remain private and invoice totals are not independently verified.
+Chat messages are stored as sent in `conversation_items` so turns can be replayed and
+recovered. Session expiry stops authentication but does not delete stored
+conversations; there is no retention or purge job.
 
-This is not clinical software, patient identity verification, EHR integration, production authentication/security, a retention/purge system, or a compliance certification. There is no cancellation/rescheduling, holiday calendar, multi-clinic tenancy, notification, deployment hardening or production load/crash guarantee. Privileged SQL can bypass service-level policy/immutability. Session expiry does not purge persisted conversations. HTTP loopback examples and local ephemeral databases do not imply encrypted public deployment.
+## Authentication and ownership
 
-Live reliability claims require separately run real evaluations; scripted fake-provider counts cannot support those claims. See [release checklist](history/RELEASE_READINESS.md).
+- Session bearers are 256-bit random values; PostgreSQL stores only their SHA-256 hash.
+- Tokens are issued once and expire after 24 hours without sliding renewal.
+- Ownership always comes from the bearer, never from IDs supplied by the caller or the
+  model. Another session's resources return 404.
+- The CLI keeps its bearer and idempotency keys in a gitignored file with mode 0600,
+  bound to the demo backend; it refuses a state file with wrong permissions or scope.
 
-## Historical security disposition (closed 2026-10-30)
+## Logging and errors
 
-An earlier prototype repository, public for a period under a different name, had
-committed archives containing OpenAI and ElevenLabs API keys, plus legacy demo
-appointment records and audio. The keys were revoked and rotated, and the owner
-reviewed provider usage for the exposure window with no unexpected activity. The
-legacy repository was deleted. This repository starts from an independent clean
-root (`6521b87`) built from a reviewed file allowlist; no legacy commits, archives,
-audio or records were imported. gitleaks v8.30.1 reports no findings across every
-ref, and every blob ever committed here is text. SEC-01 (credentials) and SEC-02
-(legacy records provenance) are closed. Deletion cannot recall copies made while the
-legacy repository was public; the rotated keys are no longer valid.
+Application logs record route, outcome code, status, trace ID, timing and provider
+token usage. They omit keys, bearers, message text, full tool arguments and SQL
+exception values. Error responses never echo request input; validation errors return
+a generic message. Provider error bodies and request headers are discarded.
 
-## Licensing (closed 2026-10-30)
+## Agent boundary
 
-Distribution is source-only under the MIT [LICENSE](../LICENSE). Third-party
-dependencies are installed separately under their own licenses, inventoried in
-[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and
-[source distribution scope](history/SOURCE_DISTRIBUTION.md); the incorporated Alembic
-template notice is included. Binary, wheelhouse or container redistribution would
-need its own notice review.
+The model has three tools: catalog, availability and proposal creation. It has no
+confirmation, SQL or appointment-mutation tool, and session identity never comes from
+model arguments. Tool arguments and results are validated with strict Pydantic models;
+the reply the user sees is rendered from templates and database reads. See
+[system design](../SYSTEM_DESIGN.md#agent-loop).
 
+## Checks
 
-## Local R3E.3 remediation boundary
+`scripts/check_synthetic.py` runs in CI and fails on unknown credential-like strings
+or sensitive file types in the current tree; known fake test credentials used only
+with `MockTransport` are listed explicitly. It does not scan Git history; history was
+checked separately with gitleaks (see the README). Tests block all real HTTP.
 
-The candidate adds transactional fencing of obsolete unfinished proposal mutations
-and a 64 KiB HTTP body admission limit; see [API details](API_DESIGN.md).
-Legacy unfinished mutations lacking ordering provenance fail closed when their
-session has proposal history. Committed-output replay and uncontested recovery
-remain available; no legacy backfill is performed. Conservative rejection can
-require a fresh message even when an old request might have been legitimate.
-Neither measure authorizes exposure to untrusted clients. F1 (anonymous appointment
-capacity consumption) and F2 (aggregate provider attempts and durable state growth)
-remain confirmed limitations requiring separate identity, admission and aggregate
-budget decisions. F5 (dependency artifact-hash enforcement) remains a hardening gap;
-version pins alone do not authenticate downloaded distribution artifacts.
-No F1, F2 or F5 control is implemented by this change. Historical reports and live
-model verdicts retain their original versions. No new live model reliability claim
-follows from offline tests.
+## Known limitations
+
+- **Not production software.** No clinical use, patient identity verification, EHR
+  integration, compliance certification, cancellation or rescheduling, holiday
+  calendar, notifications or multi-clinic tenancy.
+- **No identity or rate limiting.** Anyone who can reach the API can create sessions
+  and proposals and consume appointment capacity; aggregate provider calls and stored
+  state are not budgeted. Do not expose the API to untrusted clients without an
+  identity and admission layer.
+- **Request admission is size-only.** Bodies over 64 KiB are rejected; there is no
+  request-rate or slow-client control.
+- **Stale-intent ordering is conservative.** Older unfinished turns that cannot prove
+  their order relative to existing proposals are rejected, which can require a fresh
+  message for a request that might have been legitimate.
+- **Dependencies are version-pinned, not hash-pinned.** Pins alone do not authenticate
+  downloaded artifacts.
+- **Privileged SQL bypasses service rules.** Policy and immutability are enforced in
+  services and constraints, not by triggers on every field.
+- **Local only.** Loopback examples and local databases do not imply an encrypted or
+  hardened deployment.
+- **Live model evidence is smoke-level.** See [evaluation](EVALUATION.md); offline
+  counts are not model reliability evidence.
+
+## Licensing
+
+Distribution is source-only under the MIT [LICENSE](../LICENSE). Dependencies are
+installed separately under their own licenses, listed in
+[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), which also carries the notice for
+the incorporated Alembic migration template. Redistributing binaries, wheels or
+containers would need its own notice review.

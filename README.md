@@ -1,60 +1,102 @@
 # Clinic Scheduling Agent
 
-A synthetic text scheduling prototype built with FastAPI, PostgreSQL and validated agent tools. The backend owns scheduling rules, proposal state and atomic booking; a model cannot confirm an appointment.
+[![CI](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/workflows/ci.yml)
 
-Synthetic local demonstration: no real patients, clinics or production claims. All fixtures are generated (fictitious clinicians, UUID identifiers, fixed 2030 dates).
+An LLM scheduling agent for a synthetic clinic where the model can read the calendar
+and propose a slot, but only deterministic code and PostgreSQL can book it.
 
-## What is demonstrated
+## Why this exists
 
-- Chicago weekday scheduling, 30/60-minute visits, a 30-minute start grid, 24-hour notice and 90-day horizon.
-- Immutable ten-minute booking proposals and an explicit `confirm <proposal_id>` action.
-- PostgreSQL exclusion constraints, durable idempotency and recovery after a committed response is lost.
-- Persistent, fenced chat orchestration using only catalog, availability and proposal tools.
-- Independent backend tests, scripted agent evaluations and grader negative controls.
-- Eight separately authorized live smoke executions, with failures and versioned retests preserved.
+Booking an appointment is a write with real consequences: a double-booked clinician,
+a slot the patient never agreed to, or a "you're booked" message when nothing was
+saved. A language model is good at understanding a request and choosing what to look
+up; it cannot guarantee any of those outcomes. This project keeps the model on the
+side of the line where it is strong (interpreting the request and calling read-only
+or proposal tools) and puts every booking guarantee in FastAPI services and database
+constraints. A booking happens only through a separate, idempotent confirmation call
+that the model has no tool for.
 
-The offline CLI uses a deterministic fake provider with an explicit command grammar. It demonstrates validated tool flow and backend enforcement, not natural-language model reliability. Real `gpt-6-luna` smoke evaluations cover catalog, availability, proposals, ambiguity and unauthorized confirmation. Original S3 and S5 raw failures remain separate from successful corrected retests; backend enforcement and visible results are graded independently. See the [consolidated evaluation report](docs/history/LIVE_EVALUATION_REPORT.md).
+## Architecture
 
-The committed application at **`e1b572f`** passed **682 hosted tests** with explicit
-**evaluation contract 1.2** ([R3C.2 hosted run](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40516026765)); independent local and remote fresh clones also passed 682 tests each.
-Historical hosted results remain **378 at root `6521b87`** and **616 at `9b0c0df`**.
-These are offline application/fixture checks. GPT-6 Luna has **not** been live-evaluated
-under v1.2; historical live results retain their original contracts and scores.
-See [testing](TESTING.md) and [current status](docs/history/CURRENT_STATUS.md), including the
-boundary between the verified commit and the proposed local documentation edits.
+```mermaid
+flowchart LR
+    U[Client / CLI] -->|chat message| API[FastAPI /api/v1]
+    API --> LOOP[Agent loop<br/>max 5 tool calls per turn]
+    LOOP <-->|tool calls + typed ReplyPlan| LLM[LLM provider]
+    LOOP --> T1[get_clinic_catalog]
+    LOOP --> T2[check_availability]
+    LOOP --> T3[create_booking_proposal]
+    LOOP --> R[Template renderer<br/>facts read from DB]
+    R -->|assistant text| U
+    U -->|POST /proposals/id/confirm<br/>Idempotency-Key| C[Confirm endpoint]
+    T1 & T2 & T3 --> PG[(PostgreSQL)]
+    C --> PG
+    PG --- X[EXCLUDE no-overlap<br/>UNIQUE idempotency key]
+```
 
-## Local setup and demos
+The model chooses tools and returns a typed `ReplyPlan` (for example `availability` or
+`clarify`). It never writes the text the user sees. Proposals are immutable, expire
+after ten minutes and do not hold the slot. See [system design](SYSTEM_DESIGN.md).
 
-Use Python 3.12 and the pinned `requirements-foundation.lock`; follow [local setup](docs/history/OPERATIONS.md). No OpenAI or ElevenLabs key is needed. The active server is `app.main:app`.
+## Demo
+
+<!-- GIF: docs/demo.gif (to be recorded) -->
+
+Live demo: coming soon. Until then, the scripted CLI demo in the quickstart below runs
+the full flow against a local database.
+
+## Three guarantees
+
+| Guarantee | Enforced in | Verified by |
+| --- | --- | --- |
+| The model cannot confirm a booking | [`app/agent/tools.py`](app/agent/tools.py) registers three tools, none of which confirms; [`app/api/booking.py`](app/api/booking.py) `confirm_proposal` is the only path to an appointment | `tests/test_agent_protocol.py::test_tool_definitions_are_strict_required_and_allowlisted`, `::test_malformed_and_unapproved_tools_rejected`; `tests/test_chat.py::test_immediate_booking_injection_after_valid_proposal_never_confirms` |
+| User-visible text comes only from templates | [`app/agent/replies.py`](app/agent/replies.py) renders each `ReplyPlan` kind from validated tool results and fresh database reads | `tests/test_chat.py::test_fabricated_model_booking_or_id_cannot_be_returned`; `tests/test_reply_quality.py::test_renderer_refreshes_postgres_when_availability_changes` |
+| Overlaps and idempotency are enforced by PostgreSQL | [`app/db/models.py`](app/db/models.py) GiST exclusion `appointments_no_overlap` and `UNIQUE(session_id, idempotency_key)`; [`app/services/booking.py`](app/services/booking.py) maps SQLSTATE 23P01 to 409 `SLOT_TAKEN` | `tests/test_constraints.py::test_overlap_rejected`, `::test_idempotency_key_scoped_to_session`; `tests/test_booking.py::test_coordinated_overlap_exclusion_race`, `::test_key_reused_for_different_proposal_cannot_overwrite_result` |
+
+CI also runs a two-connection race (`scripts/demo_concurrency.py`) and a demo that
+drops the HTTP response after a committed confirmation, then recovers the original
+result with the same idempotency key.
+
+## Evaluation
+
+Every case is graded on three independent layers: the **raw model decision** (tool
+choice, arguments, reply plan), **backend state** (what PostgreSQL actually contains)
+and the **visible reply**. A safe rendered reply never earns credit for a wrong model
+decision. The offline suite has 25 scripted cases, including deliberate wrong
+decisions that the graders must catch.
+
+Live results are smoke-level validation only. Eight runs against the `gpt-6-luna`
+alias (reasoning effort `none`) between 2026-10-21 and 2026-10-26 covered five
+scenarios: catalog lookup, natural-language availability, proposal creation, an
+ambiguous request and an attempted conversational confirmation. Two first runs
+failed the raw-model layer (a time-format schema mismatch, and wrong metadata on a
+refusal); the backend layer passed in all eight runs and no appointment was created.
+After narrow fixes, retests passed all layers. These are single samples, not a
+reliability estimate, and raw run manifests are not published. Details:
+[evaluation](docs/EVALUATION.md).
+
+## Quickstart
+
+Requires Python 3.12 and Docker. No API key is needed.
 
 ```bash
-# After private environment, local PostgreSQL and pinned dependencies are prepared:
-.venv/bin/python scripts/demo_concurrency.py --synthetic-only
-.venv/bin/python -m cli --synthetic-only --scripted
-.venv/bin/python -m cli --synthetic-only
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements-foundation.lock
+docker run -d --rm --name clinic-pg -p 127.0.0.1:15433:5432 \
+  -e POSTGRES_USER=clinic_demo -e POSTGRES_PASSWORD=localdemo \
+  -e POSTGRES_DB=clinic_scheduling_test postgres:16-alpine
+export DATABASE_URL=postgresql+psycopg://clinic_demo:localdemo@127.0.0.1:15433/clinic_scheduling_test
+export TEST_DATABASE_URL=$DATABASE_URL ENABLE_LIVE_OPENAI=false \
+  CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
+  CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
+.venv/bin/pytest -q -p tests.r2a_offline_guard        # full suite, real HTTP blocked
+.venv/bin/python -m cli --synthetic-only --scripted   # migrates, seeds, runs the demo
+docker stop clinic-pg
 ```
 
-Demos use only the guarded local `clinic_scheduling_test` database and an injected clock of 2030-01-07 15:00 UTC. The scripted demos clean only their own rows after verifying results. The interactive CLI retains its synthetic session in ignored mode-0600 `.local/cli_state.json`. Do not run DB demos/tests concurrently. The concurrency script refuses a nonempty appointment table and never resets it.
-
-```text
-catalog
-availability 2030-01-09 00000000-0000-4000-8000-000000000101 00000000-0000-4000-8000-000000000201
-propose 2030-01-09 09:00 00000000-0000-4000-8000-000000000101 00000000-0000-4000-8000-000000000201
-confirm <proposal_id_returned_by_backend>
-```
-
-Confirmation bypasses the provider. A timeout is UNCERTAIN; retry the same command and private state to preserve its key. The CLI displays CONFIRMED only after retrieving the actual appointment.
-
-## Evidence and documentation
-
-- [Architecture](SYSTEM_DESIGN.md), [ADR index](docs/history/ADR_INDEX.md), [data integrity](docs/history/DATA_MODEL.md).
-- [API/OpenAPI](docs/API_DESIGN.md), [operations and recovery](docs/history/OPERATIONS.md).
-- [Agent/evaluation boundaries](docs/history/AGENT_EVALUATION.md), [M5 reconciliation](docs/history/M5_RECONCILIATION.md).
-- [Tests and CI](TESTING.md), [security/privacy](docs/SECURITY_PRIVACY.md).
-- [Acceptance matrix](docs/history/ACCEPTANCE_MATRIX.md), [release checklist](docs/history/RELEASE_READINESS.md).
-- [M6 actual execution report](docs/history/evidence/M6_report.md), [accepted M5 evidence](docs/history/evidence/M5_report.md).
-
-For a concise engineering overview and reproducible race demonstration, see the [portfolio summary](docs/history/PORTFOLIO_SUMMARY.md). [Reproducibility](docs/history/REPRODUCIBILITY.md) attributes each verification to its exact source commit.
+The CLI uses a scripted provider with a fixed command grammar (`catalog`,
+`availability ...`, `propose ...`, `confirm <id>`) and a fixed clock of 2030-01-07; it
+shows the tool flow and backend enforcement, not natural-language quality. Without an
+OpenAI key the HTTP chat endpoint returns 503. More in [testing](TESTING.md).
 
 ## Security history
 
@@ -75,10 +117,14 @@ What was done:
 What remains: nothing in this repository. Provider usage for the exposure window was
 reviewed with no unexpected activity.
 
-## Provenance
+## Documentation
 
-Legacy voice code, audio dependencies, clinic/insurance fixtures, historical appointment records, Git objects and private development state are excluded from this candidate. The original workspace and its accepted private evidence remain preserved separately. The only data/appointments.json file here is an empty retired marker required by retained static checks; it is not a runtime seed.
+- [System design](SYSTEM_DESIGN.md): components, data model, key decisions.
+- [API design](docs/API_DESIGN.md): routes, errors, idempotency and recovery.
+- [Evaluation](docs/EVALUATION.md): graders, contracts, live smoke results.
+- [Testing](TESTING.md): running the suite, CI and local setup.
+- [Security and privacy](docs/SECURITY_PRIVACY.md): controls, limitations, licensing.
+- [Project history](docs/history/): phase records, milestone evidence, superseded reports.
 
-The source is distributed under the MIT license; dependencies are installed separately under their own licenses, listed in [third-party notices](THIRD_PARTY_NOTICES.md). Product contracts are unchanged; see the [approved product baseline](docs/history/ARCHITECTURE_BASELINE.md) and [synthetic evidence provenance](docs/history/evidence/SYNTHETIC_PROVENANCE.md). Public milestone reports are labeled extracts of historical results, not new executions. Raw ledgers, internal execution prompts and local paths are withheld.
-
-Use only independently isolated synthetic test resources for future reproduction. Never reuse development databases. See the [release checklist](docs/history/RELEASE_READINESS.md) for remaining, non-security limitations.
+All data is synthetic: fictitious clinicians, UUID identifiers and fixed 2030 dates.
+MIT licensed; dependencies keep their own licenses ([notices](THIRD_PARTY_NOTICES.md)).
