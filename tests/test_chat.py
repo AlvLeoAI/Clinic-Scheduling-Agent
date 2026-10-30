@@ -661,7 +661,16 @@ def test_oversized_provider_reasoning_not_truncated_or_persisted(harness):
     harness.provider.steps.append(call("get_clinic_catalog", encrypted="x" * 24001))
     response, _ = harness.chat(owner)
     assert_error(response, 422, "CONTEXT_LIMIT")
-    assert harness.counts()["conversation_items"] == 1 and harness.counts()["appointments"] == 0
+    with Session(harness.engine) as db:
+        kinds = list(
+            db.scalars(
+                select(ConversationItem.item_type).where(
+                    ConversationItem.session_id.in_(harness.owners)
+                )
+            )
+        )
+    assert sorted(kinds) == ["intent_origin", "user_message"]
+    assert harness.counts()["appointments"] == 0
 
 
 def test_logs_are_sanitized_and_trace_correlated(harness, caplog, case_evidence):

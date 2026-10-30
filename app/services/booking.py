@@ -19,6 +19,7 @@ from app.domain.proposals import PROPOSAL_TTL, transition
 from app.domain.scheduling import CLINIC_TIMEZONE, CLINIC_ZONE, PolicyViolation, as_utc
 from app.schemas.booking import AlreadyConfirmedResponse, AppointmentResponse, ProposalResponse
 from app.schemas.foundation import ErrorDetail, ErrorResponse
+from app.services.intent import supersede_unfinished_intents
 from app.services.scheduling import SchedulingConfigurationError, SchedulingService, SlotUnavailable
 
 logger = logging.getLogger("clinic.requests")
@@ -140,7 +141,7 @@ class BookingService:
             ).model_dump(mode="json"),
         )
 
-    def create_proposal(self, session_id, payload, trace_id):
+    def create_proposal(self, session_id, payload, trace_id, *, source_turn_id=None):
         def create():
             self._session(session_id)
             now = as_utc(self.clock())
@@ -180,6 +181,9 @@ class BookingService:
                     and pending.ends_at == candidate.interval.ends_at
                 )
                 if pending.status == "PENDING" and same:
+                    supersede_unfinished_intents(
+                        self.db, session_id, pending.id, source_turn_id, now
+                    )
                     return Outcome(200, self._proposal_body(pending, trace_id))
                 if pending.status == "PENDING":
                     pending.status = transition(pending.status, "SUPERSEDED")
@@ -198,6 +202,7 @@ class BookingService:
             )
             self.db.add(row)
             self.db.flush()
+            supersede_unfinished_intents(self.db, session_id, row.id, source_turn_id, now)
             return Outcome(201, self._proposal_body(row, trace_id))
 
         return self._transaction(create)

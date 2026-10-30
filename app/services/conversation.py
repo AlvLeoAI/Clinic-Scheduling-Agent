@@ -15,6 +15,7 @@ from app.agent.protocol import MAX_CONTEXT_CHARS, MAX_TOOL_CALLS, ProtocolFailur
 from app.core.errors import ApiError
 from app.db.models import ChatSession, ChatTurn, ConversationItem
 from app.domain.scheduling import as_utc
+from app.services.intent import INTENT_ORIGIN, INTERNAL_INTENT_ITEMS
 
 
 @dataclass(frozen=True)
@@ -124,6 +125,18 @@ class ConversationStore:
                         payload={"role": "user", "content": message},
                     )
                 )
+                # Only first creation under this implementation establishes
+                # origin. Never stamp a reclaimed legacy turn as newly ordered.
+                db.add(
+                    ConversationItem(
+                        session_id=session_id,
+                        turn_id=turn.id,
+                        sequence=1,
+                        item_type=INTENT_ORIGIN,
+                        created_at=now,
+                        payload={"ordering_version": 1},
+                    )
+                )
             else:
                 turn.status = "IN_PROGRESS"
                 turn.completed_at = None
@@ -197,7 +210,11 @@ class ConversationStore:
                 raise ApiError(422, "TOOL_LIMIT_REACHED", "The five-tool turn limit was reached.")
             if any(item["call_id"] in previous_calls for item in calls):
                 raise ProtocolFailure("Provider call identity was repeated.")
-            current = [row.payload for row in rows if row.item_type != "chat_result"]
+            current = [
+                row.payload
+                for row in rows
+                if row.item_type not in {"chat_result", *INTERNAL_INTENT_ITEMS}
+            ]
             if serialized_chars([*current, *response.output]) > MAX_CONTEXT_CHARS:
                 raise ContextLimit("The current turn would exceed the context bound.")
             for item in response.output:
