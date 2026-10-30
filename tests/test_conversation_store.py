@@ -119,6 +119,10 @@ def test_expired_lease_reclaim_fences_old_owner(owner_store):
     owner, store, clock = owner_store
     ident = uuid4()
     old = claim(owner, store, message_id=ident)
+    with store.transaction() as db:
+        initial = [(row.id, row.item_type, row.payload) for row in store.rows(db, old)]
+    assert [kind for _, kind, _ in initial] == ["user_message", "intent_origin"]
+    assert initial[1][2] == {"ordering_version": 1}
     clock.now += timedelta(seconds=90)
     new = claim(owner, store, message_id=ident)
     assert new.turn_id == old.turn_id and new.fence == old.fence + 1
@@ -132,14 +136,7 @@ def test_expired_lease_reclaim_fences_old_owner(owner_store):
     with Session(store.engine) as db:
         assert db.get(ChatSession, owner).lease_fence == new.fence
         assert db.get(ChatTurn, old.turn_id).status == "IN_PROGRESS"
-        assert (
-            db.scalar(
-                select(func.count())
-                .select_from(ConversationItem)
-                .where(ConversationItem.turn_id == old.turn_id)
-            )
-            == 1
-        )
+        assert [(row.id, row.item_type, row.payload) for row in store.rows(db, new)] == initial
 
 
 def proposal_arguments():
@@ -307,6 +304,10 @@ def test_context_drops_whole_turns_without_cutting_reasoning_or_tool_pairs(owner
 def test_oversized_current_item_rejected_whole(owner_store):
     owner, store, _clock = owner_store
     lease = claim(owner, store)
+    with store.transaction() as db:
+        initial = [(row.id, row.item_type, row.payload) for row in store.rows(db, lease)]
+    assert [kind for _, kind, _ in initial] == ["user_message", "intent_origin"]
+    assert initial[1][2] == {"ordering_version": 1}
     with pytest.raises(ContextLimit):
         store.persist_response(
             lease,
@@ -316,11 +317,4 @@ def test_oversized_current_item_rejected_whole(owner_store):
             ),
         )
     with Session(store.engine) as db:
-        assert (
-            db.scalar(
-                select(func.count())
-                .select_from(ConversationItem)
-                .where(ConversationItem.turn_id == lease.turn_id)
-            )
-            == 1
-        )
+        assert [(row.id, row.item_type, row.payload) for row in store.rows(db, lease)] == initial

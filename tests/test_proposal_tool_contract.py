@@ -126,11 +126,15 @@ def assert_fake_provider_schema(payload):
 def test_fake_provider_strict_contract_creates_one_owned_pending_proposal(harness, monkeypatch):
     owner = harness.owner()
     converted = []
+    source_turns = []
     original = BookingService.create_proposal
 
-    def capture(service, session_id, request, trace_id):
+    def capture(service, session_id, request, trace_id, *, source_turn_id):
+        assert source_turn_id is not None
+        assert session_id == harness.owners[0]
+        source_turns.append(source_turn_id)
         converted.append(request)
-        return original(service, session_id, request, trace_id)
+        return original(service, session_id, request, trace_id, source_turn_id=source_turn_id)
 
     monkeypatch.setattr(BookingService, "create_proposal", capture)
 
@@ -150,6 +154,7 @@ def test_fake_provider_strict_contract_creates_one_owned_pending_proposal(harnes
     harness.provider.steps.extend([decision, reply])
     response, _ = harness.chat(owner)
     body = parsed(response)
+    assert source_turns == [body.turn_id]
     proposal = body.proposal
     assert proposal.status == "PENDING" and proposal.duration_minutes == 30
     assert proposal.expires_at == NOW + timedelta(minutes=10)

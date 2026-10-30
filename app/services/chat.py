@@ -31,6 +31,7 @@ from app.core.errors import ApiError
 from app.schemas.chat import ChatFailureResponse, ChatResponse
 from app.schemas.foundation import ErrorDetail
 from app.services.conversation import Completed, ConversationStore
+from app.services.intent import require_current_intent
 
 logger = logging.getLogger("clinic.requests")
 INSTRUCTIONS = (
@@ -168,6 +169,8 @@ class ChatService:
                         "use a new message to change details.",
                     )
                 else:
+                    if name == "create_booking_proposal":
+                        require_current_intent(db, lease.session_id, rows)
                     result = execute_tool(
                         name, args, db, lease.session_id, lease.turn_id, lease.trace_id, self.clock
                     )
@@ -327,6 +330,9 @@ class ChatService:
         except ApiError as exc:
             if exc.code == "TURN_IN_PROGRESS":
                 raise
+            if exc.code == "STALE_INTENT":
+                self.store.fail(lease)
+                raise  # Existing 409 ErrorResponse envelope; no fabricated proposal result.
             return self._failure(lease, exc.code, exc.message, exc.status, exc.retryable)
         except ContextLimit:
             return self._failure(

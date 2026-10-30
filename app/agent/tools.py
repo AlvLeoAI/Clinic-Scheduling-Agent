@@ -192,7 +192,9 @@ def execute_tool(name, arguments, db, session_id, turn_id, trace_id, clock):
             )
         elif name == "create_booking_proposal":
             request = ProposalRequest.model_validate(arguments.model_dump())
-            outcome = BookingService(db, clock).create_proposal(session_id, request, trace_id)
+            outcome = BookingService(db, clock).create_proposal(
+                session_id, request, trace_id, source_turn_id=turn_id
+            )
             snapshot = ProposalResponse.model_validate(outcome.body)
             if outcome.status == 201:
                 row = db.get(BookingProposal, snapshot.proposal_id)
