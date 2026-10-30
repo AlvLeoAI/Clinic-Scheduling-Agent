@@ -48,8 +48,11 @@ Run the same steps locally, in order:
   `--evaluation-contract 1.2` explicitly for the current application, and always pass
   `--output-dir` so committed evidence is not overwritten.
 - `check_docs` verifies local links, that `docs/openapi.json` matches the app, the
-  committed offline evaluation reconciliation, the README Security history section,
-  and that current docs contain no release-gate or internal phase wording.
+  committed offline evaluation reconciliation and the README Security history section.
+  README declares exactly one `Release status: OPEN` or `Release status: BLOCKED` line;
+  when BLOCKED it lists blockers as `- BLK-NN: reason`, and any current doc that
+  describes a release block must cite one of those identifiers. Internal phase codes
+  are not allowed in current docs.
 
 ## Test markers
 

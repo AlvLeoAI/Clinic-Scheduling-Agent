@@ -54,6 +54,13 @@ Grader versions are frozen once used, so earlier results are never regraded.
 Select the contract explicitly with `--evaluation-contract`; there is no automatic
 upgrade.
 
+Contract 1.2 is adopted for the current application and enforced in CI: every push
+runs the offline suite with `--evaluation-contract 1.2`, and the tests assert the 1.2
+graders and fixtures. Its specification closes by calling itself verification of an
+"uncommitted candidate"; that wording predates adoption and is preserved because the
+file is hash-pinned by `evaluations/scoring.py` and
+`tests/test_evaluation_versions.py`.
+
 ## Live smoke runs
 
 [`evaluations/live_runner.py`](../evaluations/live_runner.py) reuses the same chat

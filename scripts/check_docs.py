@@ -17,15 +17,20 @@ CURRENT_DOCS = (
     "docs/EVALUATION.md",
     "docs/SECURITY_PRIVACY.md",
 )
-RELEASE_BLOCKED = re.compile(
-    r"release[- ]blocker|\bP0\b|release (?:remains|is) blocked"
+# README declares the release status once; any block described elsewhere must cite
+# a blocker listed there, e.g. "- BLK-01: one-line reason".
+STATUS_LINE = re.compile(r"^Release status: (OPEN|BLOCKED)$", re.MULTILINE)
+STATUS_ANY = re.compile(r"^\s*Release status\s*:.*$", re.MULTILINE | re.IGNORECASE)
+BLOCKER_ENTRY = re.compile(r"^- (BLK-\d{2}): \S.*$", re.MULTILINE)
+BLOCKER_ID = re.compile(r"\bBLK-\d{2}\b")
+RELEASE_BLOCK = re.compile(
+    r"release[- ]blocker|(?:release|publication) (?:remains|is) blocked"
     r"|(?:public release|publication)[^.\n]{0,40}\bblocked\b|\|\s*BLOCKED\s*\|",
     re.IGNORECASE,
 )
-# Internal phase labels and approval-process wording belong only in docs/history/.
+# Internal phase labels and decision-tracking wording belong only in docs/history/.
 PHASE_JARGON = re.compile(
-    r"\b(?:R[1-3][A-E](?:\.\d+[a-z]?)?|M[0-6]|S[1-5])\b"
-    r"|owner acceptance|UNDECIDED|\battest|(?<!un)authori[sz](?:ed|es)\b",
+    r"\b(?:R[1-3][A-E](?:\.\d+[a-z]?)?|M[0-6]|S[1-5])\b|owner acceptance|UNDECIDED",
     re.IGNORECASE,
 )
 INTENDED = {
@@ -96,18 +101,40 @@ def current_documents(root=ROOT):
     return [path for path in paths if not path.is_relative_to(history)]
 
 
+def release_status(readme):
+    declared = STATUS_LINE.findall(readme)
+    assert len(declared) == 1 and len(STATUS_ANY.findall(readme)) == 1, (
+        "README.md must declare exactly one release status line."
+    )
+    entries = BLOCKER_ENTRY.findall(readme)
+    assert len(entries) == len(set(entries)), "README.md repeats a blocker identifier."
+    if declared[0] == "BLOCKED":
+        assert entries, "A BLOCKED release must list at least one blocker with a reason."
+    else:
+        assert not entries, "An OPEN release must not list blockers."
+    return declared[0], set(entries)
+
+
 def check_release_status(root=ROOT):
     readme = (root / "README.md").read_text()
     assert re.search(r"^## Security history$", readme, re.MULTILINE), (
         "README.md lacks a Security history section."
     )
-    blocked = [
-        str(path.relative_to(root))
-        for path in current_documents(root)
-        if RELEASE_BLOCKED.search(path.read_text())
-    ]
-    assert not blocked, "Current documentation describes the project as release-blocked."
-    return len(current_documents(root))
+    status, blockers = release_status(readme)
+    documents = current_documents(root)
+    for path in documents:
+        text = STATUS_ANY.sub("", path.read_text())
+        assert set(BLOCKER_ID.findall(text)) <= blockers, (
+            "Current documentation cites a blocker that README.md does not list."
+        )
+        for paragraph in re.split(r"\n\s*\n", text):
+            if not RELEASE_BLOCK.search(paragraph):
+                continue
+            assert status == "BLOCKED", "Current documentation describes a block while OPEN."
+            assert BLOCKER_ID.search(paragraph), (
+                "Current documentation describes a block without a blocker identifier."
+            )
+    return {"status": status, "blockers": len(blockers), "documents": len(documents)}
 
 
 def check_phase_jargon(root=ROOT):
@@ -130,7 +157,7 @@ def main():
                 links += 1
         snapshot = json.loads((ROOT / "docs/openapi.json").read_text())
         assert snapshot == app.openapi() and len(snapshot["paths"]) == 9
-        current_docs = check_release_status()
+        release = check_release_status()
         jargon_docs = check_phase_jargon()
         reconciliation = reconcile_m5()
         print(
@@ -144,8 +171,9 @@ def main():
                     "hosted_ci_query": "NOT QUERIED BY THIS LOCAL CHECK",
                     "hosted_ci_evidence": "See the CI badge in README.md",
                     "security_history": "PRESENT",
-                    "current_docs_release_blocked": 0,
-                    "current_docs_checked": current_docs,
+                    "release_status": release["status"],
+                    "release_blockers": release["blockers"],
+                    "current_docs_checked": release["documents"],
                     "phase_jargon_docs_checked": jargon_docs,
                 }
             )

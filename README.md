@@ -117,6 +117,8 @@ What was done:
 What remains: nothing in this repository. Provider usage for the exposure window was
 reviewed with no unexpected activity.
 
+Release status: OPEN
+
 ## Documentation
 
 - [System design](SYSTEM_DESIGN.md): components, data model, key decisions.
