@@ -1,6 +1,6 @@
 # Versioned evaluation contracts
 
-Select **1.0** or **1.1** for their frozen historical contracts, or **1.2** for current proposal-grounding verification. See the exact [v1.2 specification](EVALUATION_CONTRACT_V1_2.md).
+Select **1.0** or **1.1** for their frozen historical contracts, or **1.2** for current proposal-grounding verification. See the exact [v1.2 specification](../EVALUATION_CONTRACT_V1_2.md).
 Both runner APIs accept `evaluation_contract="1.2"` and both CLIs accept
 `--evaluation-contract 1.2`. The default remains 1.0; there is no content-based
 fallback or automatic version upgrade. Unknown versions fail before case/database
@@ -83,7 +83,7 @@ raw evaluation. Safe rendering can pass backend/visible layers independently. Th
 observer records turn and client-message identities for exact call/output correlation;
 these are private evidence fields, not new public API fields. No historical live
 execution is regraded. Complete current verification and compatibility results are
-reported separately in [testing](../TESTING.md).
+reported separately in [testing](../../TESTING.md).
 
 The fingerprinted contract specifications and historical live report retain their
 original preparation-time wording. Later commit/CI status is recorded in

@@ -1,6 +1,6 @@
 # Agent boundaries, conversation state and evaluation
 
-The current offline application candidate adds [v1.2 proposal grounding](EVALUATION_CONTRACT_V1_2.md)
+The current offline application candidate adds [v1.2 proposal grounding](../EVALUATION_CONTRACT_V1_2.md)
 to the earlier [R2C.1 quality improvements](AGENT_QUALITY_CANDIDATE.md), which introduced
 reply-plan semantic validation and availability next-step guidance. The milestone descriptions and frozen evaluation contracts
 below retain their historical scope; their version labels do not identify this candidate's prompt.
@@ -22,7 +22,7 @@ Eight separately authorized live executions are complete, including original fai
 
 ## R2 smoke runner (R2A)
 
-[evaluations.live_runner](../evaluations/live_runner.py) reuses the existing chat service, adapter, tools and independent oracles. Default and explicit `--dry-run` execution ALWAYS attach MockTransport and replace the local key with a synthetic credential. A real key in ignored `.env` cannot activate live access. Application instructions, registry, renderer, policies and booking transactions are unchanged; only the evaluation wrapper adds configurable reasoning and Standard tier.
+[evaluations.live_runner](../../evaluations/live_runner.py) reuses the existing chat service, adapter, tools and independent oracles. Default and explicit `--dry-run` execution ALWAYS attach MockTransport and replace the local key with a synthetic credential. A real key in ignored `.env` cannot activate live access. Application instructions, registry, renderer, policies and booking transactions are unchanged; only the evaluation wrapper adds configurable reasoning and Standard tier.
 
 **R2A/R2A.1 were mock-only milestones; later R2B/R2C.2 live results are recorded separately.** Simulated results are not model reliability evidence. Future paid execution needs separate owner authorization, `--live`, one explicit `--scenario` selection, and process environment `CLINIC_EVAL_ENABLE_LIVE=true`. Keep `ENABLE_LIVE_OPENAI=false` in the user's `.env`.
 
@@ -95,7 +95,7 @@ The pytest plugin denies real sync/async HTTP transport while allowing MockTrans
 
 ### Versioned fixtures and independent metrics
 
-[r2-smoke-1.0.0](../evaluations/datasets/live_smoke_v1.json) was authored from the existing synthetic catalog constants, without legacy/patient data. Its scripts are used ONLY for mocked dry runs. All prompts use ordinary names/dates, no internal IDs; each case has a new session.
+[r2-smoke-1.0.0](../../evaluations/datasets/live_smoke_v1.json) was authored from the existing synthetic catalog constants, without legacy/patient data. Its scripts are used ONLY for mocked dry runs. All prompts use ordinary names/dates, no internal IDs; each case has a new session.
 
 | Case | Raw contract | Database contract |
 | --- | --- | --- |
@@ -131,7 +131,7 @@ Use explicit `--evaluation-contract 1.2` for current evaluations; the default 1.
 
 ## Current grounding correction
 
-R3C.1b adds separately selected [contract 1.2](EVALUATION_CONTRACT_V1_2.md):
+R3C.1b adds separately selected [contract 1.2](../EVALUATION_CONTRACT_V1_2.md):
 current-request results are correlated to validated tool outputs, prior recoverable
 state is labeled, and failed/absent results cannot be presented as success. An
 incorrect raw proposal intent remains FAIL even when the backend renders safely.

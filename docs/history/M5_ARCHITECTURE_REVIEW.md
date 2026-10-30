@@ -1,6 +1,6 @@
 # M5 review of accepted M4 choices — public technical extract
 
-> Superseded on 2026-10-30: see README [Security history](../README.md#security-history).
+> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
 
 Original review was recorded on 2026-10-15 before M5 implementation. This retrospective R1A public copy omits internal milestone execution instructions. The complete private original remains unchanged. No critical contradiction was found in the inspected fake-provider architecture; no application source change was justified. This does not establish live-model compatibility or quality.
 

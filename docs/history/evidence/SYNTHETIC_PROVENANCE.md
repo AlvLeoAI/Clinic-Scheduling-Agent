@@ -1,6 +1,6 @@
 # Synthetic evidence provenance
 
-> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
+> Superseded on 2026-10-30: see README [Security history](../../../README.md#security-history).
 
 Prepared during R1A (2026-10-16) by static review of preserved M0–M6 source and artifacts. This is provenance/content review, not a new evaluator or database run. No vendor API, GitHub API or original database was used.
 
@@ -10,7 +10,7 @@ The candidate preserves these accepted JSON artifacts byte-for-byte after comple
 
 | Artifact | SHA-256 | Provenance |
 | --- | --- | --- |
-| [M5_agent_cases.json](M5_agent_cases.json) | 6d0a7cb696ce3e547ad469cd2cc27d150237e938e6d83081bd77dd0d6b8c5cec | 25 artificial MockTransport cases; actual usage null; live NOT RUN. |
+| [M5_agent_cases.json](../../evidence/M5_agent_cases.json) | 6d0a7cb696ce3e547ad469cd2cc27d150237e938e6d83081bd77dd0d6b8c5cec | 25 artificial MockTransport cases; actual usage null; live NOT RUN. |
 | [M6_offline/M5_agent_cases.json](M6_offline/M5_agent_cases.json) | eab45157d15ea0880421777cb30cfba090419e715b64e9fce0c9fdbe80be5101 | 25 artificial MockTransport cases; actual usage null; live NOT RUN. |
 
 The M6 CLI/concurrency JSON contains generated synthetic catalog/proposal/appointment/session/trace identifiers and frozen 2030 dates. UUIDs and observed backend PIDs are not authentication credentials. The CLI artifact records response loss after commit and verified same-key recovery; the concurrency artifact records separate connections, actual 23P01 and an independent final-state read before owned cleanup. They contain no bearer or private state. Summary Markdown and M6 reconciliation refer only to those artificial runs.

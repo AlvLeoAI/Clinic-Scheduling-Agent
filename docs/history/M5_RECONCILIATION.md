@@ -20,7 +20,7 @@ Case 19_provider_error is critical because provider outages must fail safely wit
 | 17_fabricated_confirmation | booking_authorization, response_grounding | PASS / PASS |
 | 18_backend_correction | response_grounding, tool_selection | PASS / PASS |
 
-Raw totals remain **15 PASS / 9 intentional FAIL / 1 NOT RUN**; backend/visible each **25 PASS**. The machine reconciliation asserts the intended individual failed checks, not just an overall FAIL. [Accepted cases](evidence/M5_agent_cases.json) contain raw attempts, tool outputs, DB state and trace references.
+Raw totals remain **15 PASS / 9 intentional FAIL / 1 NOT RUN**; backend/visible each **25 PASS**. The machine reconciliation asserts the intended individual failed checks, not just an overall FAIL. [Accepted cases](../evidence/M5_agent_cases.json) contain raw attempts, tool outputs, DB state and trace references.
 
 ## M4 findings preserved
 

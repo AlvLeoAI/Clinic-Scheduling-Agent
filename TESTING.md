@@ -16,11 +16,11 @@
 | R3C.2 hosted GitHub Actions | 682 passed, 1 warning in 35.30s | Commit `e1b572f`, [run 40516026765](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40516026765); all 16 steps succeeded, explicit v1.2 and real PostgreSQL |
 | R3D.2 documentation reconciliation | Local documentation review only | No full application suite, database operation or fresh hosted run; proposed edits are outside the verified commit |
 
-R2D performed documentation, hash, link and current-tree security checks only. R3B subsequently ran the full suite and demos on `9b0c0df`; R3C.2 did so on `e1b572f`. No live GPT-6 Luna run used v1.2. See [live evaluation evidence](docs/LIVE_EVALUATION_REPORT.md) for separately authorized paid runs and [current status](docs/CURRENT_STATUS.md) for later commit-scoped receipts; no future live call is authorized here.
+R2D performed documentation, hash, link and current-tree security checks only. R3B subsequently ran the full suite and demos on `9b0c0df`; R3C.2 did so on `e1b572f`. No live GPT-6 Luna run used v1.2. See [live evaluation evidence](docs/history/LIVE_EVALUATION_REPORT.md) for separately authorized paid runs and [current status](docs/history/CURRENT_STATUS.md) for later commit-scoped receipts; no future live call is authorized here.
 
 ## Reproduce offline checks
 
-Use Python 3.12, the pinned lockfile and a new disposable synthetic PostgreSQL runtime following [operations](docs/OPERATIONS.md) and [R2 isolation](docs/AGENT_EVALUATION.md). The full suite includes a migration round trip that rebuilds its guarded schema: never run it against a database whose state must be preserved. Use a disposable verification copy and private output paths so generated regression ledgers cannot overwrite accepted evidence. Run stateful commands sequentially.
+Use Python 3.12, the pinned lockfile and a new disposable synthetic PostgreSQL runtime following [operations](docs/history/OPERATIONS.md) and [R2 isolation](docs/history/AGENT_EVALUATION.md). The full suite includes a migration round trip that rebuilds its guarded schema: never run it against a database whose state must be preserved. Use a disposable verification copy and private output paths so generated regression ledgers cannot overwrite accepted evidence. Run stateful commands sequentially.
 
 ```bash
 CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
@@ -50,7 +50,7 @@ The local `scripts/check_docs` checker validates links, OpenAPI and accepted M5
 evidence. Its `hosted_ci_query` is **NOT QUERIED BY THIS LOCAL CHECK**; commit-scoped
 hosted evidence is documented above from preserved R1C/R3B/R3C.2 receipts. The nested M5
 `agent_live=NOT RUN` applies only to that historical offline reconciliation.
-Historical security status is recorded in the README [Security history](README.md#security-history); see also the [release checklist](docs/RELEASE_READINESS.md).
+Historical security status is recorded in the README [Security history](README.md#security-history); see also the [release checklist](docs/history/RELEASE_READINESS.md).
 
 R3C.1b count reconciliation: the 616-test baseline is retained, plus 17 focused
 proposal-grounding cases (including seven first added in R3C.1), 47 independent

@@ -1,6 +1,6 @@
 # Historical security risk register — public extract
 
-> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
+> Superseded on 2026-10-30: see README [Security history](../../../README.md#security-history).
 
 Prepared during R1A from the private M0 risk register. This extract contains no original credential values, archive contents, patient-like records, local paths or historical object identifiers. Original evidence remains unchanged in the private workspace.
 
@@ -14,4 +14,4 @@ Prepared during R1A from the private M0 risk register. This extract contains no 
 
 R1A is local preparation only: no Git root, commits, pushes, archive extraction, historical object copying, provider calls or database operations. The owner states the original GitHub repository is private; its visibility was not queried or changed.
 
-Clean-root migration is the selected direction for evaluation, not erasure of historical exposure. Downstream copies/caches and the eventual repository/name/publication disposition remain separately gated. Public release remains BLOCKED. See [security/privacy](../SECURITY_PRIVACY.md) and [M0 historical extract](../evidence/M0_report.md).
+Clean-root migration is the selected direction for evaluation, not erasure of historical exposure. Downstream copies/caches and the eventual repository/name/publication disposition remain separately gated. Public release remains BLOCKED. See [security/privacy](../../SECURITY_PRIVACY.md) and [M0 historical extract](../evidence/M0_report.md).

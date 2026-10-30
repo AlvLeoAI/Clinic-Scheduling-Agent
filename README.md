@@ -13,19 +13,19 @@ Synthetic local demonstration: no real patients, clinics or production claims. A
 - Independent backend tests, scripted agent evaluations and grader negative controls.
 - Eight separately authorized live smoke executions, with failures and versioned retests preserved.
 
-The offline CLI uses a deterministic fake provider with an explicit command grammar. It demonstrates validated tool flow and backend enforcement, not natural-language model reliability. Real `gpt-6-luna` smoke evaluations cover catalog, availability, proposals, ambiguity and unauthorized confirmation. Original S3 and S5 raw failures remain separate from successful corrected retests; backend enforcement and visible results are graded independently. See the [consolidated evaluation report](docs/LIVE_EVALUATION_REPORT.md).
+The offline CLI uses a deterministic fake provider with an explicit command grammar. It demonstrates validated tool flow and backend enforcement, not natural-language model reliability. Real `gpt-6-luna` smoke evaluations cover catalog, availability, proposals, ambiguity and unauthorized confirmation. Original S3 and S5 raw failures remain separate from successful corrected retests; backend enforcement and visible results are graded independently. See the [consolidated evaluation report](docs/history/LIVE_EVALUATION_REPORT.md).
 
 The committed application at **`e1b572f`** passed **682 hosted tests** with explicit
 **evaluation contract 1.2** ([R3C.2 hosted run](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40516026765)); independent local and remote fresh clones also passed 682 tests each.
 Historical hosted results remain **378 at root `6521b87`** and **616 at `9b0c0df`**.
 These are offline application/fixture checks. GPT-6 Luna has **not** been live-evaluated
 under v1.2; historical live results retain their original contracts and scores.
-See [testing](TESTING.md) and [current status](docs/CURRENT_STATUS.md), including the
+See [testing](TESTING.md) and [current status](docs/history/CURRENT_STATUS.md), including the
 boundary between the verified commit and the proposed local documentation edits.
 
 ## Local setup and demos
 
-Use Python 3.12 and the pinned `requirements-foundation.lock`; follow [local setup](docs/OPERATIONS.md). No OpenAI or ElevenLabs key is needed. The active server is `app.main:app`.
+Use Python 3.12 and the pinned `requirements-foundation.lock`; follow [local setup](docs/history/OPERATIONS.md). No OpenAI or ElevenLabs key is needed. The active server is `app.main:app`.
 
 ```bash
 # After private environment, local PostgreSQL and pinned dependencies are prepared:
@@ -47,14 +47,14 @@ Confirmation bypasses the provider. A timeout is UNCERTAIN; retry the same comma
 
 ## Evidence and documentation
 
-- [Architecture](SYSTEM_DESIGN.md), [ADR index](docs/ADR_INDEX.md), [data integrity](docs/DATA_MODEL.md).
-- [API/OpenAPI](docs/API_DESIGN.md), [operations and recovery](docs/OPERATIONS.md).
-- [Agent/evaluation boundaries](docs/AGENT_EVALUATION.md), [M5 reconciliation](docs/M5_RECONCILIATION.md).
+- [Architecture](SYSTEM_DESIGN.md), [ADR index](docs/history/ADR_INDEX.md), [data integrity](docs/history/DATA_MODEL.md).
+- [API/OpenAPI](docs/API_DESIGN.md), [operations and recovery](docs/history/OPERATIONS.md).
+- [Agent/evaluation boundaries](docs/history/AGENT_EVALUATION.md), [M5 reconciliation](docs/history/M5_RECONCILIATION.md).
 - [Tests and CI](TESTING.md), [security/privacy](docs/SECURITY_PRIVACY.md).
-- [Acceptance matrix](docs/ACCEPTANCE_MATRIX.md), [release checklist](docs/RELEASE_READINESS.md).
-- [M6 actual execution report](docs/evidence/M6_report.md), [accepted M5 evidence](docs/evidence/M5_report.md).
+- [Acceptance matrix](docs/history/ACCEPTANCE_MATRIX.md), [release checklist](docs/history/RELEASE_READINESS.md).
+- [M6 actual execution report](docs/history/evidence/M6_report.md), [accepted M5 evidence](docs/history/evidence/M5_report.md).
 
-For a concise engineering overview and reproducible race demonstration, see the [portfolio summary](docs/PORTFOLIO_SUMMARY.md). [Reproducibility](docs/REPRODUCIBILITY.md) attributes each verification to its exact source commit.
+For a concise engineering overview and reproducible race demonstration, see the [portfolio summary](docs/history/PORTFOLIO_SUMMARY.md). [Reproducibility](docs/history/REPRODUCIBILITY.md) attributes each verification to its exact source commit.
 
 ## Security history
 
@@ -79,6 +79,6 @@ reviewed with no unexpected activity.
 
 Legacy voice code, audio dependencies, clinic/insurance fixtures, historical appointment records, Git objects and private development state are excluded from this candidate. The original workspace and its accepted private evidence remain preserved separately. The only data/appointments.json file here is an empty retired marker required by retained static checks; it is not a runtime seed.
 
-The source is distributed under the MIT license; dependencies are installed separately under their own licenses, listed in [third-party notices](THIRD_PARTY_NOTICES.md). Product contracts are unchanged; see the [approved product baseline](docs/ARCHITECTURE_BASELINE.md) and [synthetic evidence provenance](docs/evidence/SYNTHETIC_PROVENANCE.md). Public milestone reports are labeled extracts of historical results, not new executions. Raw ledgers, internal execution prompts and local paths are withheld.
+The source is distributed under the MIT license; dependencies are installed separately under their own licenses, listed in [third-party notices](THIRD_PARTY_NOTICES.md). Product contracts are unchanged; see the [approved product baseline](docs/history/ARCHITECTURE_BASELINE.md) and [synthetic evidence provenance](docs/history/evidence/SYNTHETIC_PROVENANCE.md). Public milestone reports are labeled extracts of historical results, not new executions. Raw ledgers, internal execution prompts and local paths are withheld.
 
-Use only independently isolated synthetic test resources for future reproduction. Never reuse development databases. See the [release checklist](docs/RELEASE_READINESS.md) for remaining, non-security limitations.
+Use only independently isolated synthetic test resources for future reproduction. Never reuse development databases. See the [release checklist](docs/history/RELEASE_READINESS.md) for remaining, non-security limitations.

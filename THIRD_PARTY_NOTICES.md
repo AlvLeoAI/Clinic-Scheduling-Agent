@@ -3,7 +3,7 @@
 The project's MIT license is retained in [LICENSE](LICENSE). The following notice
 covers incorporated upstream material and must accompany redistribution of that
 material. It does not assign third-party ownership to the project author.
-See [source distribution scope](docs/SOURCE_DISTRIBUTION.md) for the proposed
+See [source distribution scope](docs/history/SOURCE_DISTRIBUTION.md) for the proposed
 source-only contents and the separate status of installed dependencies.
 
 ## Alembic generic migration template
