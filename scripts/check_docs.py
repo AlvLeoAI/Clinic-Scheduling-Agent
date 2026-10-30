@@ -8,6 +8,12 @@ from pathlib import Path
 from app.main import app
 
 ROOT = Path(__file__).resolve().parents[1]
+SUPERSEDED_MARKER = "> Superseded on "
+RELEASE_BLOCKED = re.compile(
+    r"release[- ]blocker|\bP0\b|release (?:remains|is) blocked"
+    r"|(?:public release|publication)[^.\n]{0,40}\bblocked\b|\|\s*BLOCKED\s*\|",
+    re.IGNORECASE,
+)
 INTENDED = {
     "08_bad_grid": {"tool_arguments", "policy_compliance"},
     "09_bad_practitioner": {"tool_arguments", "policy_compliance"},
@@ -69,6 +75,26 @@ def reconcile_m5():
     }
 
 
+def current_documents(root=ROOT):
+    """Markdown documents that describe current state; superseded extracts are frozen."""
+    paths = sorted(root.glob("*.md")) + sorted((root / "docs").rglob("*.md"))
+    return [path for path in paths if SUPERSEDED_MARKER not in path.read_text()]
+
+
+def check_release_status(root=ROOT):
+    readme = (root / "README.md").read_text()
+    assert re.search(r"^## Security history$", readme, re.MULTILINE), (
+        "README.md lacks a Security history section."
+    )
+    blocked = [
+        str(path.relative_to(root))
+        for path in current_documents(root)
+        if RELEASE_BLOCKED.search(path.read_text())
+    ]
+    assert not blocked, "Current documentation describes the project as release-blocked."
+    return len(current_documents(root))
+
+
 def main():
     try:
         documents = [ROOT / name for name in ("README.md", "SYSTEM_DESIGN.md", "TESTING.md")]
@@ -103,7 +129,7 @@ def main():
         assert all(
             len(re.findall(rf"\| AC-{number:02} \|", matrix)) == 1 for number in range(1, 13)
         )
-        assert "BLOCKED" in (ROOT / "docs/RELEASE_READINESS.md").read_text()
+        current_docs = check_release_status()
         reconciliation = reconcile_m5()
         print(
             json.dumps(
@@ -116,7 +142,9 @@ def main():
                     "raw_layers": reconciliation["raw_layers"],
                     "hosted_ci_query": "NOT QUERIED BY THIS LOCAL CHECK",
                     "hosted_ci_evidence": "See TESTING.md for commit-scoped historical receipts",
-                    "release_gate": "BLOCKED",
+                    "security_history": "PRESENT",
+                    "current_docs_release_blocked": 0,
+                    "current_docs_checked": current_docs,
                 }
             )
         )

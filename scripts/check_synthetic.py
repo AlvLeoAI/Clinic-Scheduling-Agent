@@ -95,7 +95,7 @@ def check_tree(root=ROOT):
         "tracked_sensitive_paths": tracked_sensitive,
         "synthetic_dataset_cases": 25,
         "retired_bookings_empty": True,
-        "historical_release_gate": "BLOCKED",
+        "historical_security": "CLOSED; see README Security history",
     }
 
 

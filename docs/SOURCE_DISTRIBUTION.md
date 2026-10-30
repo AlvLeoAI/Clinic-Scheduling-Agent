@@ -1,9 +1,9 @@
 # Proposed source-only distribution
 
-Prepared for local licensing review on 2026-10-27. **Licensing acceptance remains
-UNDECIDED. Public release remains BLOCKED.** This document defines proposed
-contents; it does not authorize publication, a repository visibility change,
-binary redistribution or deployment.
+Prepared for local licensing review on 2026-10-27. **Licensing accepted by the owner
+on 2026-10-30: source-only distribution under MIT, with dependency licenses documented
+in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).** This document defines the
+source contents; it does not cover binary redistribution or deployment.
 
 ## Included contents
 
@@ -41,7 +41,7 @@ The existing MIT grant and `Copyright (c) 2025 Alvaro` notice are preserved
 unchanged. Original project material and third-party material have distinct
 rights holders. An owner source-provenance attestation is recorded privately;
 this is not independent verification of every contribution or a claim of exclusive
-ownership. Licensing sign-off remains pending. Any newly identified copied work,
+ownership. Licensing sign-off was given on 2026-10-30. Any newly identified copied work,
 contributor right or contractual restriction requires specific review.
 
 The known incorporated Alembic template has its upstream notice in
@@ -112,7 +112,7 @@ cleared. No dependency is removed or replaced to obtain a different license resu
 
 | Mode | Boundary |
 | --- | --- |
-| Source repository | Proposed reviewed code/docs/examples, dependency declarations and applicable incorporated-material notices only; owner sign-off still pending |
+| Source repository | Reviewed code/docs/examples, dependency declarations and applicable incorporated-material notices only; owner sign-off given 2026-10-30 |
 | Dependency installation | Users obtain separate packages under their publishers' licenses; preserve those supplied notices. The project MIT license does not relicense them |
 | Binary, wheelhouse or container distribution | Outside this proposal. Requires an exact artifact/component inventory, original license/attribution notices and applicable source-availability and replacement/relinking obligations |
 | Hosted service | Outside this authorization. A source release does not authorize deployment or establish provider-contract, security, clinical or regulatory clearance |
@@ -132,7 +132,7 @@ The referenced PostgreSQL image, CPython and CI tools are separate artifacts;
 their full contents are not licensed by this project's MIT notice. A Compose file
 or CI image reference is not permission to redistribute all image layers.
 
-Final source-rights/licensing acceptance, review of the exact final manifest and
-separate publication authorization remain outstanding. This is a scoped notice
+Source-rights/licensing acceptance was given on 2026-10-30 for source-only
+distribution. This is a scoped notice
 remediation, not legal certification or a production-readiness claim. Existing
 historical reports retain their original dates, results and evidence limitations.

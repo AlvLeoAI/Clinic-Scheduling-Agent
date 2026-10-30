@@ -1,5 +1,7 @@
 # Historical security risk register — public extract
 
+> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
+
 Prepared during R1A from the private M0 risk register. This extract contains no original credential values, archive contents, patient-like records, local paths or historical object identifiers. Original evidence remains unchanged in the private workspace.
 
 | Risk | Priority | Historical finding and current disposition |

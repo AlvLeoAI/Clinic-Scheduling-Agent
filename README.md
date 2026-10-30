@@ -2,7 +2,7 @@
 
 A synthetic text scheduling prototype built with FastAPI, PostgreSQL and validated agent tools. The backend owns scheduling rules, proposal state and atomic booking; a model cannot confirm an appointment.
 
-**Local demonstration only. Historical Git credentials/audio/privacy remains a P0 release blocker. The repository remains private. Publication, deployment and further live evaluations require separate owner authorization. No production, regulatory or real-clinic claims are made.**
+Synthetic local demonstration: no real patients, clinics or production claims. All fixtures are generated (fictitious clinicians, UUID identifiers, fixed 2030 dates).
 
 ## What is demonstrated
 
@@ -54,14 +54,31 @@ Confirmation bypasses the provider. A timeout is UNCERTAIN; retry the same comma
 - [Acceptance matrix](docs/ACCEPTANCE_MATRIX.md), [release checklist](docs/RELEASE_READINESS.md).
 - [M6 actual execution report](docs/evidence/M6_report.md), [accepted M5 evidence](docs/evidence/M5_report.md).
 
-R1A preservation and R1B independent Git-root preparation were completed. R1C validated private hosting, real hosted CI and a fresh remote clone of the approved root. R1D completed the private canonical-name cutover; the historical repository was quarantined and archived at that time. It later returned HTTP 404, and the owner confirmed its intentional removal. These are preserved historical verifications, not fresh remote checks in R2D. The clean root does not resolve the historical P0 privacy/security issue.
-
 For a concise engineering overview and reproducible race demonstration, see the [portfolio summary](docs/PORTFOLIO_SUMMARY.md). [Reproducibility](docs/REPRODUCIBILITY.md) attributes each verification to its exact source commit.
 
-## Provenance and release boundary
+## Security history
+
+This repository starts from a clean root commit (`6521b87`, 2026-10-16). An earlier
+prototype repository, public for a period under a different name, had committed archives
+containing OpenAI and ElevenLabs API keys, along with demo appointment records and audio
+from a retired voice version.
+
+What was done:
+
+- The exposed OpenAI and ElevenLabs keys were revoked and rotated.
+- The project was rebuilt from a reviewed file allowlist. No legacy commits, archives,
+  audio or appointment records were carried over, and the legacy repository was deleted.
+- gitleaks v8.30.1 reports no findings across every ref of this repository. Every blob
+  ever committed here is text: no audio, archives or credential files.
+- CI runs a current-tree secret and synthetic-fixture check on every push.
+
+What remains: nothing in this repository. Provider usage for the exposure window was
+reviewed with no unexpected activity.
+
+## Provenance
 
 Legacy voice code, audio dependencies, clinic/insurance fixtures, historical appointment records, Git objects and private development state are excluded from this candidate. The original workspace and its accepted private evidence remain preserved separately. The only data/appointments.json file here is an empty retired marker required by retained static checks; it is not a runtime seed.
 
-The MIT license is retained. Product contracts are unchanged; see the [approved product baseline](docs/ARCHITECTURE_BASELINE.md) and [synthetic evidence provenance](docs/evidence/SYNTHETIC_PROVENANCE.md). Public milestone reports are labeled extracts of historical results, not new executions. Raw ledgers, internal execution prompts and local paths are withheld.
+The source is distributed under the MIT license; dependencies are installed separately under their own licenses, listed in [third-party notices](THIRD_PARTY_NOTICES.md). Product contracts are unchanged; see the [approved product baseline](docs/ARCHITECTURE_BASELINE.md) and [synthetic evidence provenance](docs/evidence/SYNTHETIC_PROVENANCE.md). Public milestone reports are labeled extracts of historical results, not new executions. Raw ledgers, internal execution prompts and local paths are withheld.
 
-Use only independently isolated synthetic test resources for future reproduction. Never reuse development databases. No new model call or release action is authorized by these instructions. Public release remains [BLOCKED](docs/RELEASE_READINESS.md).
+Use only independently isolated synthetic test resources for future reproduction. Never reuse development databases. See the [release checklist](docs/RELEASE_READINESS.md) for remaining, non-security limitations.

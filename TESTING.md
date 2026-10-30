@@ -50,7 +50,7 @@ The local `scripts/check_docs` checker validates links, OpenAPI and accepted M5
 evidence. Its `hosted_ci_query` is **NOT QUERIED BY THIS LOCAL CHECK**; commit-scoped
 hosted evidence is documented above from preserved R1C/R3B/R3C.2 receipts. The nested M5
 `agent_live=NOT RUN` applies only to that historical offline reconciliation.
-[Release gates](docs/RELEASE_READINESS.md) retain P0 independently.
+Historical security status is recorded in the README [Security history](README.md#security-history); see also the [release checklist](docs/RELEASE_READINESS.md).
 
 R3C.1b count reconciliation: the 616-test baseline is retained, plus 17 focused
 proposal-grounding cases (including seven first added in R3C.1), 47 independent

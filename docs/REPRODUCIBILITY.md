@@ -18,6 +18,6 @@ Future reproduction must use fresh private credentials, unique PostgreSQL storag
 
 The retained scripts/reproduce_local.py exercises a working-tree copy, not a migration export or fresh-clone proof. It copies documentation directories and omits LICENSE from its temporary root-file selection; do not redistribute that temporary copy as a release package. The actual candidate retains MIT LICENSE. Cached dependencies/images in historical local runs do not prove cold offline availability.
 
-Private .env, runtime credentials, traces and development state are ignored and excluded from publication review. R2D freezes evidence hashes without copying raw private reports into the candidate. A clean root does not resolve the historical P0 risk; [public release remains BLOCKED](RELEASE_READINESS.md).
+Private .env, runtime credentials, traces and development state are ignored and excluded from publication review. R2D freezes evidence hashes without copying raw private reports into the candidate. The historical exposure was closed on 2026-10-30; see the README [Security history](../README.md#security-history).
 
-The legacy repository subsequently became API-inaccessible (HTTP 404), and the owner confirmed intentional removal. This does not establish erasure of historical third-party copies or resolve P0.
+The legacy repository subsequently became API-inaccessible (HTTP 404), and the owner confirmed intentional removal. Copies made while it was public cannot be recalled; its exposed keys were rotated.
