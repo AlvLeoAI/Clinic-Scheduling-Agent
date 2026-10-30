@@ -25,7 +25,7 @@ flowchart LR
 | `app/services/chat.py`, `conversation.py` | Durable turn journal, client-message deduplication, short lease/fence transactions and restart continuation. |
 | `app/agent/` | Strict registry, Responses wire adapter/context and typed model plan with deterministic fact rendering. |
 | `app/db/`, `alembic/` | Ten-table schema, structural ownership/uniqueness/exclusion constraints and synthetic catalog. |
-| `evaluations/` | Independent bounded oracle and separate raw/backend/visible graders over scripted and live decisions; explicit contracts 1.0/1.1. |
+| `evaluations/` | Independent bounded oracle and separate raw/backend/visible graders; explicit current contract 1.2, with frozen 1.0/1.1 retained. |
 | `scripts/demo_*` | Guarded test-only setup and fixture cleanup; controlled real concurrency, no global reset. |
 
 Availability and proposals do not reserve a slot. Confirmation revalidates policy, inserts under a PostgreSQL exclusion constraint and atomically commits appointment, proposal state and idempotency outcome. No generated text authorizes this operation.
@@ -40,4 +40,4 @@ See [ADR-001 through ADR-008](docs/ADR_INDEX.md), [data model](docs/DATA_MODEL.m
 
 The proposal tool uses a dedicated strict five-character HH:MM input string with a 24-hour pattern, then converts through the existing ProposalRequest validator. It never advertises broader format:time, normalizes malformed time, or relaxes scheduling policy. Only clarify ReplyPlans may contain missing_fields; other kinds require an empty list. Invalid combinations fail safely through the existing 503 path, with raw output retained privately for independent evaluation.
 
-Availability rendering adds interval-selection/proposal guidance while preserving the non-reservation and separate-confirmation boundaries. Grader 1.1 checks the exact new grammar and every interval against independent evidence; 1.0 remains frozen. See [contracts](docs/EVALUATION_CONTRACTS.md) and [observed live results](docs/LIVE_EVALUATION_REPORT.md). Hosted CI validated the root commit, not these later uncommitted changes.
+Availability rendering adds interval-selection/proposal guidance while preserving the non-reservation and separate-confirmation boundaries. Grader 1.1 introduced the exact new grammar and independent interval checks; current contract 1.2 adds failure-path proposal grounding. Both historical grader versions remain available. See [contracts](docs/EVALUATION_CONTRACTS.md) and [observed live results](docs/LIVE_EVALUATION_REPORT.md). Hosted CI passed 682 offline tests on committed `e1b572f` with explicit v1.2. No live v1.2 model evaluation has run; [current status](docs/CURRENT_STATUS.md) separates those evidence boundaries.

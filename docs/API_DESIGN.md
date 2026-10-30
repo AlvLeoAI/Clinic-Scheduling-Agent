@@ -14,7 +14,7 @@ Base `/api/v1`. JSON/Pydantic contracts, UUID identifiers, RFC3339 offset-aware 
 | GET `/appointments/{id}` | Owning-session actual committed appointment. |
 | POST `/chat/messages` | UUID client_message_id + nonblank message ≤4000 chars; turn/message/trace and nullable authoritative proposal. |
 
-Run the documented server, then open `http://127.0.0.1:8000/docs` or fetch `/openapi.json`. The checked-in [snapshot](openapi.json) was exported and parity-checked in original M6, and is copied byte-for-byte into this candidate. Parity was subsequently checked in accepted verification and is rechecked by R2D documentation checks; this does not imply current hosted validation. The inherited API title includes “foundation”; implemented routes/contracts are authoritative. Do not paste bearers into shared screenshots or logs.
+Run the documented server, then open `http://127.0.0.1:8000/docs` or fetch `/openapi.json`. The checked-in [snapshot](openapi.json) was exported and parity-checked in original M6, and now documents the R3E.3 body-admission response. Parity was subsequently checked in accepted verification and is rechecked by R2D documentation checks; this does not imply current hosted validation. The inherited API title includes “foundation”; implemented routes/contracts are authoritative. Do not paste bearers into shared screenshots or logs.
 
 Proposal fields include owner/clinic/practitioner/type IDs, duration, starts/ends, timezone, created/expiry/status and trace. Duration comes only from type. Full interval must fit Chicago weekdays 09:00–17:00, aligned every 30 minutes, with elapsed lead in inclusive [24 hours,90 days]. Missing/ambiguous scheduling parameters require clarification; the backend does not guess dates/practitioners/types.
 
@@ -34,3 +34,35 @@ Failed operations are described from validated recorded tool errors. Status rema
 a fresh backend projection on replay; prose is stable and confirmation instructions
 are conditional on PENDING. A proposal intent without a successful result does not
 claim creation. See [contract 1.2](EVALUATION_CONTRACT_V1_2.md).
+
+
+## Request admission and obsolete intent recovery
+
+All HTTP request bodies have a 65,536-byte (64 KiB) application admission limit.
+Oversized declarations are rejected immediately; actual received bytes are bounded
+regardless of absent, invalid or understated Content-Length. HTTP 413 uses the
+existing sanitized ErrorResponse with REQUEST_TOO_LARGE and a correlated
+X-Trace-ID. No oversized body reaches JSON parsing. A server may already have
+allocated a large individual ASGI frame; this application does not retain it in
+its admitted buffer. This is not a request-rate or slow-client deadline control.
+
+Under the session row lock, each accepted proposal journals a stale-intent marker
+for other unfinished chat turns. A previously unexecuted proposal mutation in a
+marked turn returns HTTP 409 STALE_INTENT using the existing ErrorResponse. Send
+a new message UUID to express a changed intention. Already recorded tool results
+and completed responses remain replayable, and read-only recovery remains available.
+Proposal acceptance and the markers commit or roll back together. These internal
+markers never enter provider context. Confirmation semantics and the three tools
+are unchanged; there is no new evaluation contract or database migration.
+
+New turns record an internal ordering-origin item under the same session lock.
+Reclaiming an old turn never adds this origin. Before an unexecuted mutation, an
+unmarked legacy turn with any same-session proposal history fails closed with
+HTTP 409 STALE_INTENT: its ordering cannot be verified, so a fresh message is
+required. This includes terminal proposal history and may conservatively reject
+a legitimate old intention whose relative order cannot be proved. No timestamp
+comparison or legacy-state backfill is used. Recorded effects and completed
+results still replay first; uncontested legacy recovery with no proposal history
+and read-only recovery remain available. Origin items never enter provider context.
+All mutation writers must use the corrected implementation; mixed-version writers
+are not supported. No deployment, existing-database migration or cleanup is implied.

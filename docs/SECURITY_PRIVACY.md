@@ -1,6 +1,6 @@
 # Security, privacy and limitations
 
-**Public release is BLOCKED by unresolved historical Git credentials/audio/privacy (P0).** M0 owner revocation/rotation and usage-review attestation is preserved, not independently verified by provider calls. No history rewrite, force-push, publication, Notion update or deployment is authorized. See the preserved [M0 risk register](security/M0_RISK_REGISTER.md).
+**Public release is BLOCKED pending explicit historical-risk decisions and separate publication authorization.** The R3D.1 audit was accepted as a deliverable; that does not constitute owner risk acceptance. M0 owner revocation/rotation and usage-review attestation is preserved, not independently verified by provider calls. No history rewrite, force-push, publication, Notion update or deployment is authorized. See the preserved [M0 risk register](security/M0_RISK_REGISTER.md) and later [current status](CURRENT_STATUS.md).
 
 Current runtime/fixtures are generated from scratch: fictitious clinic/clinicians, synthetic visit types and UUIDs, no patient name/phone/reason fields. Legacy voice code, archives and booking JSON are not runtime sources. The current-tree pattern/provenance checker does not inspect or clear history, certify provenance of old audio, or prove absence of every possible secret. Known literal fake credentials used only with MockTransport are explicitly classified; unknown pattern candidates fail. Do not upload historical blobs as evidence.
 
@@ -15,6 +15,46 @@ Any public release requires owner resolution of historical risk, scope/claim rev
 The legacy repository was private and archived at the historical cutover. Final
 R3B checks returned HTTP 404; the owner subsequently confirmed intentional removal.
 No current archive/visibility claim can be re-attested for that inaccessible
-repository. Deletion does not prove elimination of old exposure, third-party copies,
-audio or patient-like fixture provenance risks. Revocation/rotation remains an owner
-attestation, separate from current clean-root checks. P0 is still unresolved.
+repository. Deletion does not prove elimination of old exposure or third-party copies.
+Revocation/rotation remains an owner attestation, separate from clean-root checks.
+
+During R3D.1 the owner stated that the legacy appointment records and audio were
+entirely synthetic demo material. This is a provenance attestation; excluded audio
+and historical records were not extracted or independently authenticated. The owner
+also stated that the outcome of the earlier provider usage review was not recorded
+or uncertain. No finding of either misuse or absence of misuse follows from that
+uncertainty. The exact reviewed clean commit has no known dependency on those legacy
+materials; this narrow technical finding does not close historical exposure.
+
+The proposed disposition for historical credentials, provenance and retained copies
+is **MITIGATED / OWNER ACCEPTANCE REQUIRED**. All owner acceptance fields remain
+**UNDECIDED** in the separate private decision package. Retain private evidence and
+reopen the relevant finding if specific contrary provenance, accessible sensitive
+copies or unresolved abuse becomes known. No proof of eliminating every unknown
+third-party copy is claimed or required.
+
+Licensing is a separate gate. The retained MIT license covers the project's grant;
+third-party dependencies retain their own licenses. The audited pinned runtime has
+32 distributions with license metadata/files, including LGPL and MPL components.
+This is bounded inventory evidence, not a certification of all redistribution
+formats. Owner confirmation of included-source rights and required notices remains
+UNDECIDED. The proposed release is reviewed source only; bundled runtimes, native
+libraries, images, historical audio and private evidence require separate review.
+
+
+## Local R3E.3 remediation boundary
+
+The candidate adds transactional fencing of obsolete unfinished proposal mutations
+and a 64 KiB HTTP body admission limit; see [API details](API_DESIGN.md).
+Legacy unfinished mutations lacking ordering provenance fail closed when their
+session has proposal history. Committed-output replay and uncontested recovery
+remain available; no legacy backfill is performed. Conservative rejection can
+require a fresh message even when an old request might have been legitimate.
+Neither measure authorizes exposure to untrusted clients. F1 (anonymous appointment
+capacity consumption) and F2 (aggregate provider attempts and durable state growth)
+remain confirmed limitations requiring separate identity, admission and aggregate
+budget decisions. F5 (dependency artifact-hash enforcement) remains a hardening gap;
+version pins alone do not authenticate downloaded distribution artifacts.
+No F1, F2 or F5 control is implemented by this change. Historical reports and live
+model verdicts retain their original versions. No new live model reliability claim
+or public-release authorization follows from offline tests.

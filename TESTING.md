@@ -12,9 +12,11 @@
 | R3B hosted GitHub Actions | 616 passed | Commit `9b0c0df`, [run 40437049577](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40437049577), actual PostgreSQL/offline execution |
 | R3B local and remote fresh clones | 616 passed in each | Independently isolated Git storage, runtime and PostgreSQL |
 | R3C.1b full local suite | 682 passed, 0 failed/errors/skips, 10 warnings | Isolated PostgreSQL, explicit v1.2, real HTTP blocked; 2026-10-27 |
-| R3C.1b current working tree hosted CI | NOT RUN | Local uncommitted contract 1.2 correction; historical hosted results do not validate it |
+| R3C.2 precommit / local fresh clone / remote fresh clone | 682 passed in each, 10 warnings each | Exact accepted application content committed at `e1b572f`; independent Git storage, runtime and PostgreSQL |
+| R3C.2 hosted GitHub Actions | 682 passed, 1 warning in 35.30s | Commit `e1b572f`, [run 40516026765](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/40516026765); all 16 steps succeeded, explicit v1.2 and real PostgreSQL |
+| R3D.2 documentation reconciliation | Local documentation review only | No full application suite, database operation or fresh hosted run; proposed edits are outside the verified commit |
 
-R2D performed documentation, hash, link and current-tree security checks only. R3B subsequently ran the full suite and demos on `9b0c0df`. See [live evaluation evidence](docs/LIVE_EVALUATION_REPORT.md) for separately authorized paid runs; no future live call is authorized here.
+R2D performed documentation, hash, link and current-tree security checks only. R3B subsequently ran the full suite and demos on `9b0c0df`; R3C.2 did so on `e1b572f`. No live GPT-6 Luna run used v1.2. See [live evaluation evidence](docs/LIVE_EVALUATION_REPORT.md) for separately authorized paid runs and [current status](docs/CURRENT_STATUS.md) for later commit-scoped receipts; no future live call is authorized here.
 
 ## Reproduce offline checks
 
@@ -46,7 +48,7 @@ separately. See [the v1.2 contract](docs/EVALUATION_CONTRACT_V1_2.md).
 
 The local `scripts/check_docs` checker validates links, OpenAPI and accepted M5
 evidence. Its `hosted_ci_query` is **NOT QUERIED BY THIS LOCAL CHECK**; commit-scoped
-hosted evidence is documented above from preserved R3B receipts. The nested M5
+hosted evidence is documented above from preserved R1C/R3B/R3C.2 receipts. The nested M5
 `agent_live=NOT RUN` applies only to that historical offline reconciliation.
 [Release gates](docs/RELEASE_READINESS.md) retain P0 independently.
 

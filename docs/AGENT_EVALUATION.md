@@ -91,7 +91,7 @@ The regression suite includes a migration round trip: run only on the verified d
 .venv/bin/python -m scripts.check_synthetic
 ```
 
-The pytest plugin denies real sync/async HTTP transport while allowing MockTransport and in-process TestClient. The private R2A execution harness additionally blocks outbound Python sockets except PostgreSQL loopback 15433. CI now uses that same service port and HTTP-denial plugin. R3B subsequently validated those R2 changes with 616 hosted tests at `9b0c0df`. The newer v1.2 correction has no hosted execution.
+The pytest plugin denies real sync/async HTTP transport while allowing MockTransport and in-process TestClient. The private R2A execution harness additionally blocks outbound Python sockets except PostgreSQL loopback 15433. CI now uses that same service port and HTTP-denial plugin. R3B validated those R2 changes with 616 hosted tests at `9b0c0df`. R3C.2 subsequently passed 682 hosted tests at `e1b572f` with explicit v1.2. Hosted tests use offline providers; they are not live model evaluations.
 
 ### Versioned fixtures and independent metrics
 
@@ -127,7 +127,7 @@ The adapter retains its existing phase timeout (30 seconds) and post-buffer resp
 
 The corrected proposal tool accepts only strict HH:MM strings (five characters, pattern `^(?:[01][0-9]|2[0-3]):[0-5][0-9]$`), then validates through ProposalRequest. Seconds/offsets are rejected, never normalized. ReplyPlan semantic validation requires missing_fields=[] for every non-clarify kind. Invalid metadata remains a raw failure and safe application error.
 
-Use explicit `--evaluation-contract 1.2` for current evaluations; the default 1.0 is retained for historical fixtures and rejects new availability guidance. [Contract documentation](EVALUATION_CONTRACTS.md) explains independent interval/authorization/semantic checks. [Live results](LIVE_EVALUATION_REPORT.md) preserve eight separate executions. Historical hosted CI covers `6521b87` with 378 tests and `9b0c0df` with 616 tests. Current uncommitted R3C.1b changes have local offline evidence only. No additional paid run is authorized by these instructions.
+Use explicit `--evaluation-contract 1.2` for current evaluations; the default 1.0 is retained for historical fixtures and rejects new availability guidance. [Contract documentation](EVALUATION_CONTRACTS.md) explains independent interval/authorization/semantic checks. [Live results](LIVE_EVALUATION_REPORT.md) preserve eight separate executions. Hosted CI covers `6521b87` with 378 tests, `9b0c0df` with 616 tests and `e1b572f` with 682 tests. No live GPT-6 Luna execution used v1.2. [Current status](CURRENT_STATUS.md) attributes later verification without changing historical results. No additional paid run is authorized by these instructions.
 
 ## Current grounding correction
 
@@ -135,6 +135,6 @@ R3C.1b adds separately selected [contract 1.2](EVALUATION_CONTRACT_V1_2.md):
 current-request results are correlated to validated tool outputs, prior recoverable
 state is labeled, and failed/absent results cannot be presented as success. An
 incorrect raw proposal intent remains FAIL even when the backend renders safely.
-This is an offline candidate; the eight historical live executions retain their
-original versions. Hosted CI passed 378 tests at `6521b87` and 616 at `9b0c0df`;
-neither validates these newer uncommitted changes.
+The correction is committed at `e1b572f` and passed 682 hosted tests plus independent
+local and remote fresh-clone verification. The eight historical live executions
+retain their original versions. The v1.2 verification uses offline fixtures only.
