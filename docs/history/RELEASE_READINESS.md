@@ -2,7 +2,7 @@
 
 **Public release: no open gates (2026-10-30).** Historical security (SEC-01, SEC-02)
 and licensing are closed by owner decision; see the README
-[Security history](../README.md#security-history). The owner changes repository
+[Security history](../../README.md#security-history). The owner changes repository
 visibility directly. Remaining NOT RUN rows below are scope limitations of a
 synthetic prototype, not release gates.
 
@@ -20,7 +20,7 @@ synthetic prototype, not release gates.
 | SEC-01 credential residual risk | CLOSED | OpenAI and ElevenLabs keys revoked and rotated; owner reviewed provider usage for the exposure window with no unexpected activity; gitleaks v8.30.1 clean across all refs |
 | SEC-02 provenance and exclusion | CLOSED | No legacy records, audio, archives or credential files in any committed blob; current fixtures are generated synthetic data |
 | Historical copies and private retention | CLOSED | Legacy repository deleted; copies made while it was public cannot be recalled and its keys are rotated. Private evidence stays with the owner outside this repository |
-| Included-source rights and redistribution | CLOSED | Source-only distribution under MIT; dependency licenses in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and [source scope](SOURCE_DISTRIBUTION.md) |
+| Included-source rights and redistribution | CLOSED | Source-only distribution under MIT; dependency licenses in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) and [source scope](SOURCE_DISTRIBUTION.md) |
 | Documentation commits after `e1b572f` | PASS | Hosted CI passed 737 tests at `fa6b63d` ([run](https://github.com/AlvLeoAI/Clinic-Scheduling-Agent/actions/runs/41122901875)) |
 | Final repository identity/ref preflight | PASS | 2026-10-30: refs are `main` and merged PR #1 only; no tags, releases, issues or artifacts; all Actions run logs scanned with no secrets or personal data |
 | Final publication | OWNER ACTION | The owner changes repository visibility; no further documentation gate |
@@ -42,5 +42,5 @@ are not statistical reliability estimates.
 Original reports remain private and unchanged. Public-facing summaries contain no
 raw transcripts, operational identifiers or private evidence links. See
 [current evidence scope](CURRENT_STATUS.md), [live limitations](LIVE_EVALUATION_REPORT.md),
-[acceptance matrix](ACCEPTANCE_MATRIX.md), [security](SECURITY_PRIVACY.md) and
+[acceptance matrix](ACCEPTANCE_MATRIX.md), [security](../SECURITY_PRIVACY.md) and
 [reproducibility](REPRODUCIBILITY.md).

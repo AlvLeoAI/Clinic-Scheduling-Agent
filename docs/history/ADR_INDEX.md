@@ -8,7 +8,7 @@ Source: [public product baseline](ARCHITECTURE_BASELINE.md), derived from approv
 | ADR-002 | 30/60-minute types, 24h notice, 90-day horizon, Chicago timezone | M2 policy/API and M3 confirmation revalidation tests. Bounds are inclusive elapsed UTC durations. |
 | ADR-003 | Two practitioners, weekdays 09:00–17:00, 30-minute grid | Synthetic DB catalog/weekly schedules; M2 boundary/DST tests. |
 | ADR-004 | Immutable ten-minute proposals; one pending/session; approved terminal states; no hold | M3 lifecycle/concurrency tests, M5 four-state replay, M6 terminal CLI display. |
-| ADR-005 | FastAPI v1, eight functional operations plus health, three agent tools | Actual [OpenAPI snapshot](openapi.json), route-scope and schema tests. |
+| ADR-005 | FastAPI v1, eight functional operations plus health, three agent tools | Actual [OpenAPI snapshot](../openapi.json), route-scope and schema tests. |
 | ADR-006 | PostgreSQL sessions/conversation, bounded context, opaque bearer, serialization/recovery | M4 journal/lease/fence/dedup/restart tests. Session lifetime approved as 24h without sliding renewal. |
 | ADR-007 | Responses store=false, strict/nonparallel, max five calls, Pydantic | Unchanged REST adapter over httpx, mocked transport tests; live support NOT RUN. |
 | ADR-008 | Independent backend and agent evaluation; concurrency critical | M5 independent oracle/negative controls and M6 controlled real 23P01 demo. |

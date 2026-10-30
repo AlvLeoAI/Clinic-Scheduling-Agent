@@ -1,6 +1,6 @@
 # Live evaluation evidence — R2B and R2C
 
-> Superseded on 2026-10-30: see README [Security history](../README.md#security-history).
+> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
 
 Sanitized evidence summary, frozen 2026-10-26 (America/Argentina/Cordoba). Synthetic local prototype; repository remains private and public release is BLOCKED by an unresolved historical credential/audio/privacy P0 issue. No production, clinical integration, regulatory compliance or statistical model-reliability claim is made.
 
@@ -91,7 +91,7 @@ Private frozen manifests retain exact execution timestamps, full source inventor
 
 Five heterogeneous scenarios and eight total executions cannot establish statistical reliability, general clinical safety or causal attribution to any single change. S3 used different tool schemas; S2/S5 regressions also changed prompt/ReplyPlan/renderer/grader contracts. Deterministic text limits what can be inferred about model-authored communication. Fixed synthetic dates/catalog and narrow English response grammars do not represent real patient traffic. A valid S5 run does not exercise live invalid-plan rejection or a pending-proposal transition. No production load, clinical-system integration or regulatory validation is claimed.
 
-See [evaluation contracts](EVALUATION_CONTRACTS.md), [architecture](../SYSTEM_DESIGN.md), [test evidence scopes](../TESTING.md) and [release checklist](RELEASE_READINESS.md). Public release remains BLOCKED; no additional live run is authorized.
+See [evaluation contracts](EVALUATION_CONTRACTS.md), [architecture](../../SYSTEM_DESIGN.md), [test evidence scopes](../../TESTING.md) and [release checklist](RELEASE_READINESS.md). Public release remains BLOCKED; no additional live run is authorized.
 
 ## Subsequent offline correction
 
@@ -99,4 +99,4 @@ R3C.1b changes failure-path rendering and adds v1.2 provenance grading without
 altering this historical execution matrix, telemetry or component-hash table.
 Original S3 and S5 failures and the separately authorized retests remain unchanged.
 There are still eight live executions; v1.2 has no live-model evidence. See
-[the current offline contract](EVALUATION_CONTRACT_V1_2.md) and [testing](../TESTING.md).
+[the current offline contract](../EVALUATION_CONTRACT_V1_2.md) and [testing](../../TESTING.md).

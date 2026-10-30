@@ -25,7 +25,7 @@ visibility directly.
 ## Frozen evidence and evaluation versions
 
 The [historical live report](LIVE_EVALUATION_REPORT.md), milestone evidence, M0 risk
-extract and [fingerprinted v1.2 specification](EVALUATION_CONTRACT_V1_2.md) are
+extract and [fingerprinted v1.2 specification](../EVALUATION_CONTRACT_V1_2.md) are
 preserved unchanged. Their statements that a correction was uncommitted or lacked
 hosted verification describe their preparation-time state. The table above records
 the subsequent R3C.2 verification. It does not change their observations or hashes.
@@ -57,7 +57,7 @@ would need separate authorization and verification.
 ## Historical risk and owner decisions (closed 2026-10-30)
 
 R3D.1 was accepted as an audit deliverable. The owner recorded the following
-decisions on 2026-10-30; see the README [Security history](../README.md#security-history).
+decisions on 2026-10-30; see the README [Security history](../../README.md#security-history).
 
 | Topic | Evidence | Decision |
 | --- | --- | --- |
@@ -65,9 +65,9 @@ decisions on 2026-10-30; see the README [Security history](../README.md#security
 | Legacy records/audio | Owner attests synthetic demo material; no legacy records, audio or archives in any blob committed to this repository | CLOSED; no historical audio is redistributed |
 | Legacy repository removal | The legacy repository, public for a period under a different name, was deleted; authenticated HTTP 404 observed | CLOSED; copies made while it was public cannot be recalled, and its keys are rotated |
 | Current source isolation | Clean-root source/ancestry and exclusion checks verified; no legacy-data dependency | CLOSED |
-| MIT/dependencies | MIT retained; 32 pinned distributions documented in [third-party notices](../THIRD_PARTY_NOTICES.md) | CLOSED; source-only distribution |
+| MIT/dependencies | MIT retained; 32 pinned distributions documented in [third-party notices](../../THIRD_PARTY_NOTICES.md) | CLOSED; source-only distribution |
 
 Reopen the relevant finding only if known active misuse, contrary real-data
 provenance or a specific rights conflict becomes known. No release gate remains;
 the owner changes repository visibility directly. See [the release checklist](RELEASE_READINESS.md)
-and [security limitations](SECURITY_PRIVACY.md).
+and [security limitations](../SECURITY_PRIVACY.md).

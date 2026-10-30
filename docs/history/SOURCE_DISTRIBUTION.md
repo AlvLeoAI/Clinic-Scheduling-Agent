@@ -2,7 +2,7 @@
 
 Prepared for local licensing review on 2026-10-27. **Licensing accepted by the owner
 on 2026-10-30: source-only distribution under MIT, with dependency licenses documented
-in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).** This document defines the
+in [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).** This document defines the
 source contents; it does not cover binary redistribution or deployment.
 
 ## Included contents
@@ -12,7 +12,7 @@ source contents; it does not cover binary redistribution or deployment.
 | Application source | Python backend, agent, CLI, evaluation and test code; migration source and template |
 | Documentation and examples | Project documentation, inline diagrams, generated application OpenAPI, sanitized synthetic examples and previously reviewed public evidence extracts |
 | Dependency declarations | pyproject.toml and requirements-foundation.lock, including existing development/test dependencies |
-| Notices | Existing MIT LICENSE and [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), including the complete notice for the incorporated Alembic template |
+| Notices | Existing MIT LICENSE and [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md), including the complete notice for the incorporated Alembic template |
 | Development instructions | Existing configuration examples, Compose/CI declarations and scripts; references to external runtimes are not copies of those runtimes |
 
 Use an explicitly reviewed file manifest for any later release. A blanket archive
@@ -45,7 +45,7 @@ ownership. Licensing sign-off was given on 2026-10-30. Any newly identified copi
 contributor right or contractual restriction requires specific review.
 
 The known incorporated Alembic template has its upstream notice in
-[THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md). The copyright year is
+[THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md). The copyright year is
 unchanged. No repository-wide claim that all included material
 was authored exclusively by the project owner is made.
 
