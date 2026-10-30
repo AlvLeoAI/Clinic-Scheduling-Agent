@@ -84,3 +84,9 @@ observer records turn and client-message identities for exact call/output correl
 these are private evidence fields, not new public API fields. No historical live
 execution is regraded. Complete current verification and compatibility results are
 reported separately in [testing](../TESTING.md).
+
+The fingerprinted contract specifications and historical live report retain their
+original preparation-time wording. Later commit/CI status is recorded in
+[current status](CURRENT_STATUS.md), without changing those bytes or retrospectively
+rescoring a live execution. Contract 1.2 passed offline hosted checks at `e1b572f`;
+it has no live GPT-6 Luna evaluation evidence.
