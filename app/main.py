@@ -17,10 +17,12 @@ from starlette.exceptions import HTTPException
 from app.api.booking import router as booking_router
 from app.api.chat import router as chat_router
 from app.api.routes import router
+from app.core.admission import RequestBodyLimitMiddleware
 from app.core.clock import utc_now
 from app.core.config import Settings
 from app.core.errors import ApiError, error_response
 from app.db.session import build_engine
+from app.schemas.foundation import ErrorResponse
 
 logger = logging.getLogger("clinic.requests")
 logger.setLevel(logging.INFO)
@@ -46,7 +48,14 @@ def create_app(
         if owned_engine:
             engine.dispose()
 
-    application = FastAPI(title="Clinic Scheduling Agent — foundation", lifespan=lifespan)
+    application = FastAPI(
+        title="Clinic Scheduling Agent — foundation",
+        lifespan=lifespan,
+        responses={413: {"model": ErrorResponse}},
+    )
+    # Register before the tracing middleware so even admission failures receive
+    # the normal sanitized log record and correlated response/header trace ID.
+    application.add_middleware(RequestBodyLimitMiddleware)
     application.state.settings = settings
     application.state.engine = engine
     application.state.clock = clock
