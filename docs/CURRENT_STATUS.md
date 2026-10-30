@@ -19,8 +19,8 @@ isolated PostgreSQL, migrations/parity, offline evaluations, negative controls,
 concurrency/recovery demos and security checks. Hosted execution reported one
 existing Starlette/httpx warning; local JUnit runs reported ten warnings. Preserved
 receipts establish these results. R3D.2 does not re-query GitHub or rerun that suite.
-The canonical repository was verified PRIVATE in R3C.2; no visibility change is
-authorized here.
+The canonical repository was verified PRIVATE in R3C.2; the owner changes
+visibility directly.
 
 ## Frozen evidence and evaluation versions
 
@@ -54,26 +54,20 @@ to the invocation that produced them, not to all project history. R3D.2 leaves t
 Python source and historical outputs unchanged; a later source wording correction
 would need separate authorization and verification.
 
-## Historical risk and owner decisions
+## Historical risk and owner decisions (closed 2026-10-30)
 
-R3D.1 is accepted as an audit deliverable only. Recorded factual owner attestations
-are distinct from independent verification and from risk acceptance:
+R3D.1 was accepted as an audit deliverable. The owner recorded the following
+decisions on 2026-10-30; see the README [Security history](../README.md#security-history).
 
-| Topic | Evidence classification | Remaining decision |
+| Topic | Evidence | Decision |
 | --- | --- | --- |
-| Historical credentials | Owner attested revocation/rotation and usage review in M0; no credential testing or independent vendor receipt | Usage-review outcome is uncertain; residual-risk acceptance UNDECIDED |
-| Legacy records/audio | Owner attests entirely synthetic demo material; excluded from the independently reviewed clean source | Provenance/exclusion risk acceptance UNDECIDED; no historical-audio redistribution approval |
-| Legacy repository removal | Owner reports intentional deletion; preserved authenticated HTTP 404 observations establish inaccessibility | Known sharing/retention and residual-copy decision UNDECIDED; no claim that all outside copies disappeared |
-| Current source isolation | Exact clean-root source/ancestry and exclusion checks verified; no known legacy-data dependency | Narrow technical mitigation only; not historical P0 closure |
-| MIT/dependencies | MIT retained; 32 pinned distributions have local license metadata/files | Included-source rights/notices and source-only redistribution approval UNDECIDED |
+| Historical credentials | OpenAI and ElevenLabs keys revoked and rotated; owner reviewed provider usage for the exposure window with no unexpected activity; gitleaks v8.30.1 clean across all refs | CLOSED |
+| Legacy records/audio | Owner attests synthetic demo material; no legacy records, audio or archives in any blob committed to this repository | CLOSED; no historical audio is redistributed |
+| Legacy repository removal | The legacy repository, public for a period under a different name, was deleted; authenticated HTTP 404 observed | CLOSED; copies made while it was public cannot be recalled, and its keys are rotated |
+| Current source isolation | Clean-root source/ancestry and exclusion checks verified; no legacy-data dependency | CLOSED |
+| MIT/dependencies | MIT retained; 32 pinned distributions documented in [third-party notices](../THIRD_PARTY_NOTICES.md) | CLOSED; source-only distribution |
 
-The private decision package requests explicit dispositions without credential
-values, recordings, patient-like records or raw transcripts. Proposed historical
-disposition is MITIGATED / OWNER ACCEPTANCE REQUIRED. No acceptance has been inferred.
-Known active misuse, contrary real-data provenance or a specific unresolved rights
-conflict requires assessment rather than generic risk acceptance.
-
-**Public release remains BLOCKED.** Owner decisions, review of the final documentation
-and file manifest, a separately authorized commit/push verification gate, and explicit
-publication authorization are still required. See [the release checklist](RELEASE_READINESS.md)
+Reopen the relevant finding only if known active misuse, contrary real-data
+provenance or a specific rights conflict becomes known. No release gate remains;
+the owner changes repository visibility directly. See [the release checklist](RELEASE_READINESS.md)
 and [security limitations](SECURITY_PRIVACY.md).

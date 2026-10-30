@@ -34,7 +34,7 @@ A chat request claims a short expiring lease/fence, releases its DB transaction 
 
 Historical chat results and current proposal state are separate: replay preserves turn/message/trace and refreshes its proposal projection. M3 confirmation replay retains exact original status/body. These accepted distinctions and typed rendering are reviewed in [M5 findings](docs/M5_RECONCILIATION.md).
 
-See [ADR-001 through ADR-008](docs/ADR_INDEX.md), [data model](docs/DATA_MODEL.md), [API design](docs/API_DESIGN.md) and [security limits](docs/SECURITY_PRIVACY.md). Public release remains blocked; this design is not a production architecture claim.
+See [ADR-001 through ADR-008](docs/ADR_INDEX.md), [data model](docs/DATA_MODEL.md), [API design](docs/API_DESIGN.md) and [security limits](docs/SECURITY_PRIVACY.md). This design is not a production architecture claim.
 
 ## Contract evolution and evidence
 

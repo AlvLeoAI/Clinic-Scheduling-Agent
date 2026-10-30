@@ -1,6 +1,6 @@
 # Local development, demonstrations and recovery
 
-Requires Python 3.12, PostgreSQL 16 through local Docker Compose, and uv or an isolated pip environment. Only synthetic data is supported. Historical credential/audio/privacy remains a release blocker. Legacy executables, voice dependencies and unverified fixtures are excluded from this candidate. This document describes the existing application; R1A does not authorize running it.
+Requires Python 3.12, PostgreSQL 16 through local Docker Compose, and uv or an isolated pip environment. Only synthetic data is supported. Legacy executables, voice dependencies and unverified fixtures are excluded from this candidate. This document describes the existing application; R1A does not authorize running it.
 
 ## Bootstrap after separate R1B authorization
 

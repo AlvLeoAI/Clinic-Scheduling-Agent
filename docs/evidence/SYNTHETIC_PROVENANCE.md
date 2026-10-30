@@ -1,5 +1,7 @@
 # Synthetic evidence provenance
 
+> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
+
 Prepared during R1A (2026-10-16) by static review of preserved M0–M6 source and artifacts. This is provenance/content review, not a new evaluator or database run. No vendor API, GitHub API or original database was used.
 
 The dataset has 25 cases, version 1.0.0, with explicitly Synthetic-prefixed inputs and independently generated fixed catalog UUIDs. FixtureProvider always attaches httpx.MockTransport, uses model label synthetic-offline-m5, and exposes no live-client branch. Its exporter emits request fingerprints, not bearer headers. Snapshots select only synthetic proposal/appointment fields.

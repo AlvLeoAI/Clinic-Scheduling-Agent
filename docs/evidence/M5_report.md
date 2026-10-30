@@ -1,5 +1,7 @@
 # M5 — Offline evaluation and independent grading — historical public extract
 
+> Superseded on 2026-10-30: see README [Security history](../../README.md#security-history).
+
 Public-safe extract prepared during R1A on 2026-10-16. Original private report and exact ledgers remain unchanged outside this candidate. Results below were recorded in the original milestone; they were not rerun from this candidate. Owner has accepted M0–M6 local technical gates. Public release remains BLOCKED by unresolved historical privacy/security and separate verification/authorization gates.
 
 Recorded full suite: 353 passed, 0 failed, 0 skipped, one inherited warning. The independent backend category had 234 passes. M5 added 25 offline scenarios, 24 grader/unit cases (including 16 corrupt-observation controls) and 11 wire/error/timeout cases. The standalone 25-case fixture gate passed.

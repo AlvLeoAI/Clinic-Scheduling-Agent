@@ -1,5 +1,7 @@
 # Live evaluation evidence — R2B and R2C
 
+> Superseded on 2026-10-30: see README [Security history](../README.md#security-history).
+
 Sanitized evidence summary, frozen 2026-10-26 (America/Argentina/Cordoba). Synthetic local prototype; repository remains private and public release is BLOCKED by an unresolved historical credential/audio/privacy P0 issue. No production, clinical integration, regulatory compliance or statistical model-reliability claim is made.
 
 ## Objective and methodology
