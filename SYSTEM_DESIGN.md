@@ -14,7 +14,7 @@ The architecture diagram is in the [README](README.md#architecture).
 | `app/domain/`, `app/services/scheduling.py` | Deterministic time and interval rules; availability computed from PostgreSQL. |
 | `app/services/booking.py` | Immutable proposals, one-way status transitions, confirmation with revalidation, conflict mapping, durable idempotent results. |
 | `app/services/chat.py`, `conversation.py`, `intent.py` | Agent loop, durable turn journal, message deduplication, per-session lease and fence, stale-intent ordering. |
-| `app/agent/` | Tool registry and schemas, Responses API adapter, context selection, `ReplyPlan` and template renderer. |
+| `app/agent/` | Tool registry and schemas, provider registry (`demo`, `openai`), Responses API adapter, scripted demo provider, context selection, `ReplyPlan` and template renderer. |
 | `app/db/`, `alembic/` | Ten-table schema with ownership, uniqueness and exclusion constraints; synthetic catalog seed. |
 | `evaluations/` | Independent interval oracle and separate raw, backend and visible graders; versioned contracts. |
 | `scripts/` | Guarded demo setup and cleanup, concurrency demo, current-tree secret check, doc checks. |
@@ -31,7 +31,8 @@ The architecture diagram is in the [README](README.md#architecture).
 
 1. A chat request claims a short expiring lease and an increasing fence on the session,
    then releases its database transaction before calling the provider.
-2. The provider receives instructions, the selected context, three strict tool schemas
+2. The provider, chosen by `AGENT_PROVIDER` through the registry in
+   `app/agent/provider.py`, receives instructions, the selected context, three strict tool schemas
    and a strict `ReplyPlan` output schema (`store=false`, no parallel tool calls).
 3. Each tool call is validated, executed and journaled with its result. After five
    calls in a turn, tool use is disabled.
@@ -88,6 +89,7 @@ outside the service safety boundary.
 | Durable idempotency records with original body | Lost responses are recoverable without inferring success from a timeout. |
 | Stateless Responses calls with a database journal | Restarts and retries resume from recorded state; no provider-side conversation dependency. |
 | REST over `httpx` instead of an SDK | Injectable transport for fully offline tests. |
+| One `ResponsesProvider` protocol with a registry | `demo` and `openai` share the loop; another provider (for example Anthropic) is a new registry entry that translates its API to Responses-style items. |
 | Independent graders per layer | Safe backend behaviour cannot hide a wrong model decision. |
 
 See [API design](docs/API_DESIGN.md), [evaluation](docs/EVALUATION.md) and

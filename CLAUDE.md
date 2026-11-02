@@ -18,7 +18,7 @@ docker run -d --rm --name <unique-name> -p 127.0.0.1:15433:5432 --tmpfs /var/lib
   -e POSTGRES_USER=clinic_demo -e POSTGRES_PASSWORD=<random> -e POSTGRES_DB=clinic_scheduling_test \
   postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
 export DATABASE_URL=postgresql+psycopg://clinic_demo:<random>@127.0.0.1:15433/clinic_scheduling_test
-export TEST_DATABASE_URL=$DATABASE_URL ENABLE_LIVE_OPENAI=false OPENAI_API_KEY= OPENAI_MODEL= \
+export TEST_DATABASE_URL=$DATABASE_URL AGENT_PROVIDER=disabled OPENAI_API_KEY= OPENAI_MODEL= \
   CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
   CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
 ```
@@ -32,8 +32,11 @@ ledgers into `docs/evidence/`.
 
 ## Rules that are easy to break
 
-- Keep `ENABLE_LIVE_OPENAI=false`. Live evals cost money and need the owner's explicit
-  go-ahead per run.
+- `AGENT_PROVIDER` is `disabled` (default), `demo` or `openai`; `ENABLE_LIVE_OPENAI` is a
+  deprecated alias for `openai`. Never select `openai` or run live evals without the
+  owner's explicit go-ahead per run: they cost money. New providers go in the
+  `PROVIDERS` registry in `app/agent/provider.py` behind `ResponsesProvider`; `app/`
+  must not import from `cli/`.
 - Do not edit `docs/EVALUATION_CONTRACT_V1_2.md` or `tests/test_graders_v1_2.py`: they
   are hash-pinned by `evaluations/scoring.py` and `tests/test_evaluation_versions.py`.
 - `evaluations.runner` defaults to contract 1.0 and to writing into `docs/evidence/`;

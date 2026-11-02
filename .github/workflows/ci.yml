@@ -27,7 +27,7 @@ jobs:
     env:
       DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:15433/clinic_scheduling_test
       TEST_DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:15433/clinic_scheduling_test
-      ENABLE_LIVE_OPENAI: 'false'
+      AGENT_PROVIDER: 'disabled'
       OPENAI_API_KEY: ''
       OPENAI_MODEL: ''
       CLINIC_BOOKING_EVIDENCE_FILE: M6_booking_regression_cases.json

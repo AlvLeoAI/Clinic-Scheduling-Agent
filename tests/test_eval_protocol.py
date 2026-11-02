@@ -21,7 +21,7 @@ def config():
     return Settings(
         _env_file=None,
         database_url="postgresql+psycopg://clinic_demo:synthetic@127.0.0.1:15432/clinic_scheduling_test",
-        enable_live_openai=True,
+        agent_provider="openai",
         openai_api_key="synthetic-protocol-credential",
         openai_model="synthetic-protocol-model",
         provider_timeout_seconds=7,

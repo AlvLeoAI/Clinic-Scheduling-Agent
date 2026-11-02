@@ -82,7 +82,7 @@ class FixtureProvider:
         self.barrier = Barrier(2) if case.exercise == "isolation_restart" else None
         self.first = set()
         # Always attach MockTransport. No code path can construct a live client here.
-        config = settings.model_copy(update={"enable_live_openai": True})
+        config = settings.model_copy(update={"agent_provider": "openai"})
         self.adapter = HttpResponsesProvider(config, httpx.MockTransport(self.transport))
 
     def respond(self, payload):

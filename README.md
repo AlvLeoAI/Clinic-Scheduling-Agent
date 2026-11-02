@@ -85,7 +85,7 @@ docker run -d --rm --name clinic-pg -p 127.0.0.1:15433:5432 \
   -e POSTGRES_USER=clinic_demo -e POSTGRES_PASSWORD=localdemo \
   -e POSTGRES_DB=clinic_scheduling_test postgres:16-alpine
 export DATABASE_URL=postgresql+psycopg://clinic_demo:localdemo@127.0.0.1:15433/clinic_scheduling_test
-export TEST_DATABASE_URL=$DATABASE_URL ENABLE_LIVE_OPENAI=false \
+export TEST_DATABASE_URL=$DATABASE_URL AGENT_PROVIDER=disabled \
   CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
   CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
 .venv/bin/pytest -q -p tests.r2a_offline_guard        # full suite, real HTTP blocked
@@ -95,8 +95,9 @@ docker stop clinic-pg
 
 The CLI uses a scripted provider with a fixed command grammar (`catalog`,
 `availability ...`, `propose ...`, `confirm <id>`) and a fixed clock of 2030-01-07; it
-shows the tool flow and backend enforcement, not natural-language quality. Without an
-OpenAI key the HTTP chat endpoint returns 503. More in [testing](TESTING.md).
+shows the tool flow and backend enforcement, not natural-language quality. The server
+picks its chat provider with `AGENT_PROVIDER` (`disabled` by default, `demo` for the
+same grammar against the real clock, or `openai`). More in [testing](TESTING.md).
 
 ## Security history
 

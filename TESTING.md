@@ -17,7 +17,7 @@ docker run -d --rm --name clinic-pg -p 127.0.0.1:15433:5432 \
   -e POSTGRES_USER=clinic_demo -e POSTGRES_PASSWORD=localdemo \
   -e POSTGRES_DB=clinic_scheduling_test postgres:16-alpine
 export DATABASE_URL=postgresql+psycopg://clinic_demo:localdemo@127.0.0.1:15433/clinic_scheduling_test
-export TEST_DATABASE_URL=$DATABASE_URL ENABLE_LIVE_OPENAI=false \
+export TEST_DATABASE_URL=$DATABASE_URL AGENT_PROVIDER=disabled \
   CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
   CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
 ```
@@ -90,8 +90,18 @@ Run the same steps locally, in order:
 ```
 
 Open `http://127.0.0.1:8000/docs`. Catalog, availability and booking work without any
-API key. With `ENABLE_LIVE_OPENAI=false` (the default), `POST /api/v1/chat/messages`
-returns 503 because no provider is configured; the CLI supplies its own scripted
-provider.
+API key. `AGENT_PROVIDER` selects the chat provider:
+
+| Value | Chat behaviour |
+| --- | --- |
+| `disabled` (default) | `POST /api/v1/chat/messages` returns 503; no provider is configured. |
+| `demo` | The CLI's scripted command grammar, served with the real clock. |
+| `openai` | OpenAI Responses API; requires `OPENAI_API_KEY` and `OPENAI_MODEL`. Paid. |
+
+Chat responses carry `X-Agent-Provider: demo` or `openai`. In demo mode the grammar is
+`catalog`, `availability DATE PRACTITIONER_UUID TYPE_UUID` and `propose DATE HH:MM
+PRACTITIONER_UUID TYPE_UUID`; pick a weekday 2 to 90 days ahead, because the 2030
+dates in the CLI examples only work with the CLI's fixed clock. `ENABLE_LIVE_OPENAI=true`
+is a deprecated alias for `AGENT_PROVIDER=openai`.
 
 Earlier verification receipts per commit are kept in [project history](docs/history/).

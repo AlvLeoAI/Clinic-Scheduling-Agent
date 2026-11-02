@@ -115,7 +115,7 @@ class SmokeProvider:
             raise ValueError("Offline execution requires httpx.MockTransport.")
         runtime = settings.model_copy(
             update={
-                "enable_live_openai": True,
+                "agent_provider": "openai",
                 "openai_api_key": settings.openai_api_key
                 if live
                 else SecretStr("synthetic-protocol-credential"),
