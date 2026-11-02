@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from app.agent.provider import HttpResponsesProvider, build_provider
+from app.agent.provider import build_provider
 from app.api.auth import require_session
 from app.api.booking import ReplayJSONResponse
+from app.core.errors import ApiError
 from app.db.models import ChatSession
 from app.db.session import get_db
 from app.schemas.chat import ChatFailureResponse, ChatRequest, ChatResponse
@@ -27,6 +28,7 @@ PROVIDER_HEADER = {
         401: {"model": ErrorResponse},
         409: {"model": ErrorResponse},
         422: {"model": ErrorResponse | ChatFailureResponse},
+        501: {"model": ErrorResponse, "description": "No agent provider is configured"},
         503: {"model": ChatFailureResponse, "headers": PROVIDER_HEADER},
     },
 )
@@ -41,11 +43,15 @@ def chat_message(
     db.rollback()
     settings = request.app.state.settings
     factory = request.app.state.provider_factory
-    provider = (
-        factory()
-        if factory is not None
-        else build_provider(settings) or HttpResponsesProvider(settings)
-    )
+    provider = factory() if factory is not None else build_provider(settings)
+    if provider is None:
+        # Checked before any turn is claimed: no state is written, and the same
+        # client_message_id is processed normally once a provider is configured.
+        raise ApiError(
+            501,
+            "AGENT_PROVIDER_DISABLED",
+            "Chat is disabled on this server: no agent provider is configured.",
+        )
     status, body = ChatService(
         request.app.state.engine, settings, request.app.state.clock, provider
     ).handle(owner_id, payload, request.state.trace_id)

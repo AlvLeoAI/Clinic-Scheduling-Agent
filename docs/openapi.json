@@ -943,6 +943,16 @@
             },
             "description": "Unprocessable Entity"
           },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No agent provider is configured"
+          },
           "503": {
             "content": {
               "application/json": {
