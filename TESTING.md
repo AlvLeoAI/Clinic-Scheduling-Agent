@@ -150,4 +150,27 @@ PRACTITIONER_UUID TYPE_UUID`; pick a weekday 2 to 90 days ahead, because the 203
 dates in the CLI examples only work with the CLI's fixed clock. `ENABLE_LIVE_OPENAI=true`
 is a deprecated alias for `AGENT_PROVIDER=openai`.
 
+`GET /api/v1/info` reports the configured provider without spending a chat turn.
+
+## Container image
+
+The root `Dockerfile` builds the API from `requirements-runtime.lock`, which is
+`requirements-foundation.lock` without the test tools (pytest, ruff). Regenerate both
+from `pyproject.toml` with `uv pip compile` (commands are in each file's header);
+`tests/test_container_images.py` fails if their pins drift apart.
+
+The image runs as uid 10001, reads configuration only from environment variables and
+starts `uvicorn` on port 8000. Its `HEALTHCHECK` uses the DB-free liveness endpoint
+`/api/v1/health/live`; `/api/v1/health` is readiness and also checks the database.
+Migrations and seeding are one-off commands from the same image, never part of start:
+
+```bash
+docker build -t clinic-api .
+docker run --rm --network host -e DATABASE_URL=… clinic-api \
+  sh -c "alembic upgrade head && python -m scripts.seed"
+```
+
+Logs are one JSON line per request on stderr (uvicorn also logs to stderr). Container
+log drivers, including CloudWatch's `awslogs`, capture both stdout and stderr.
+
 Earlier verification receipts per commit are kept in [project history](docs/history/).

@@ -36,6 +36,9 @@ ledgers into `docs/evidence/`.
 
 ## Rules that are easy to break
 
+- Containers: the API image installs `requirements-runtime.lock` (no test tools); keep
+  it in step with `requirements-foundation.lock`. Never run migrations or seeding on
+  container start; they are one-off commands from the same image.
 - DB guard: `DATABASE_ALLOWED_HOSTS` (exact hostnames) widens only migrations and
   seeding; the `test_only` guard stays loopback-only with no query string. Only the
   `sslmode`/`sslrootcert` query keys are allowed. Never add wildcards or other keys.
