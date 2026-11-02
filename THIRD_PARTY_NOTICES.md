@@ -14,6 +14,10 @@ and `ui/requirements.lock` (including Streamlit, Apache-2.0), each under its own
 license. They are built locally and in CI and are not published; anyone who
 distributes them must carry those packages' notices.
 
+The API image also contains the public Amazon RDS CA certificate bundle for us-east-2,
+downloaded from `truststore.pki.rds.amazonaws.com` at build time and verified by
+SHA-256, so the database connection can use `sslmode=verify-full`.
+
 ## Alembic generic migration template
 
 - Included file: [alembic/script.py.mako](alembic/script.py.mako).
