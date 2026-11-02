@@ -1,0 +1,7 @@
+# Allowlist: the UI image needs only what its Dockerfile copies.
+*
+!Dockerfile
+!requirements.lock
+!__init__.py
+!client.py
+!app.py

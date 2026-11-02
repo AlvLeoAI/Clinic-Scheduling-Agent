@@ -1,5 +1,6 @@
 """UI HTTP client against httpx.MockTransport: no server, database or Streamlit."""
 
+import ast
 import json
 from datetime import UTC, date, datetime, timedelta
 from uuid import uuid4
@@ -197,3 +198,21 @@ def test_unreachable_and_malformed_responses_are_typed():
         client.info()
     assert caught.value.code == "UNEXPECTED_RESPONSE" and caught.value.retryable
     assert "html" not in caught.value.user_message
+
+
+def test_page_state_names_do_not_shadow_mapping_methods():
+    # st.session_state is a mapping: `state.keys = …` silently hides .keys() and broke
+    # confirmation once. Check every attribute the page sets or reads on it.
+    from collections.abc import MutableMapping
+    from pathlib import Path
+
+    tree = ast.parse((Path(__file__).resolve().parents[1] / "ui" / "app.py").read_text())
+    names = {
+        node.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "state"
+    }
+    reserved = {name for name in dir(MutableMapping) if not name.startswith("_")}
+    assert names and not (names - {"get", "pop"}) & reserved, names & reserved
