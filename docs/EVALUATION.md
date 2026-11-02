@@ -30,7 +30,7 @@ provider errors, timeouts, expiry, supersession, conflicts and session isolation
 Nine cases script a deliberately wrong model decision. They are negative controls: the
 raw layer must report FAIL while backend and visible layers PASS. The committed
 reconciliation ([`docs/evidence/M5_agent_summary.md`](evidence/M5_agent_summary.md),
-generated under contract 1.0) records raw 15 PASS, 9 intentional FAIL and 1 NOT RUN
+generated under contract 1.2) records raw 15 PASS, 9 intentional FAIL and 1 NOT RUN
 (an injected provider error produces no decision); backend and visible 25 PASS each.
 `scripts/check_docs.py` verifies that reconciliation on every CI run. This measures the
 graders and the plumbing, not model quality.
