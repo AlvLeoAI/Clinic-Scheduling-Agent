@@ -64,3 +64,40 @@ jobs:
           .venv/bin/python -m cli --synthetic-only --scripted --evidence test-results/ci/cli.json
       - name: API and documentation consistency
         run: .venv/bin/python -m scripts.check_docs
+
+  containers:
+    name: Containers (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Build API and UI images natively
+        run: docker compose -f compose.demo.yaml build
+      - name: Images match the runner architecture and run as uid 10001
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          for image in clinic-scheduling-api:local clinic-scheduling-ui:local; do
+            test "$(docker image inspect -f '{{.Architecture}}' "$image")" = "$ARCH"
+            test "$(docker image inspect -f '{{.Config.User}}' "$image")" = "10001"
+          done
+      - name: Start db, migrate+seed, API and UI
+        run: docker compose -f compose.demo.yaml up -d --wait --wait-timeout 180
+      - name: Smoke test (health, info, demo catalog turn, UI health)
+        run: python3 scripts/smoke_stack.py
+      - name: Stack logs
+        if: failure()
+        run: docker compose -f compose.demo.yaml logs --no-color
+      - name: Tear down
+        if: always()
+        run: docker compose -f compose.demo.yaml down --volumes --remove-orphans

@@ -91,6 +91,12 @@ Run the same steps locally, in order:
   describes a release block must cite one of those identifiers. Internal phase codes
   are not allowed in current docs.
 
+A second job, `containers`, runs on native amd64 and arm64 runners (no emulation). It
+builds the API and UI images, checks that each matches the runner architecture and
+runs as uid 10001, starts the [container stack](#container-stack), runs
+`scripts/smoke_stack.py` and always tears the stack down. Locally that is
+`make stack-up stack-smoke stack-down`.
+
 ## Test markers
 
 | Marker | Meaning |
