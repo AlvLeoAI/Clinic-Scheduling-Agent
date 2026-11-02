@@ -14,6 +14,9 @@ HOSTNAME = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
     database_url: SecretStr
+    # Optional password merged into a password-less DATABASE_URL, so a secret store can
+    # inject it on its own (ECS secrets) without building a URL in a shell.
+    database_password: SecretStr | None = None
     test_database_url: SecretStr | None = None
     # Comma-separated exact hostnames that migrations and seeding may target besides
     # loopback (a compose service name, an RDS endpoint). Empty by default.
@@ -70,6 +73,17 @@ class Settings(BaseSettings):
             or not self.openai_model
         ):
             raise ValueError("AGENT_PROVIDER=openai requires OPENAI_API_KEY and OPENAI_MODEL.")
+        return self
+
+    @model_validator(mode="after")
+    def merge_database_password(self):
+        if self.database_password is None or not self.database_password.get_secret_value():
+            return self
+        url = make_url(self.database_url.get_secret_value())
+        if url.password is not None:
+            raise ValueError("Set the database password in DATABASE_URL or DATABASE_PASSWORD.")
+        merged = url.set(password=self.database_password.get_secret_value())
+        self.database_url = SecretStr(merged.render_as_string(hide_password=False))
         return self
 
     @model_validator(mode="after")

@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+from sqlalchemy.engine import make_url
 
 from app.core.config import Settings
 from app.db.safety import require_demo_database
@@ -164,3 +165,26 @@ def test_seed_uses_the_allowed_hosts_setting_before_connecting(monkeypatch):
     monkeypatch.setenv("DATABASE_ALLOWED_HOSTS", "db")
     with pytest.raises(Connected):
         seed.main()
+
+
+def test_database_password_is_merged_into_a_passwordless_url(monkeypatch):
+    monkeypatch.delenv("DATABASE_PASSWORD", raising=False)
+    bare = LOCAL.replace(":synthetic@", "@")
+    merged = Settings(_env_file=None, database_url=bare, database_password="p@ss/w:rd%")
+    url = make_url(merged.database_url.get_secret_value())
+    assert (url.password, url.host, url.database) == (
+        "p@ss/w:rd%",
+        "127.0.0.1",
+        "clinic_scheduling_dev",
+    )
+    assert "p@ss" not in repr(merged)
+    assert require_demo_database(merged.database_url.get_secret_value())
+    unset = Settings(_env_file=None, database_url=LOCAL, database_password="")
+    assert unset.database_url.get_secret_value() == LOCAL
+
+
+def test_database_password_conflicting_with_url_password_rejected(monkeypatch):
+    monkeypatch.delenv("DATABASE_PASSWORD", raising=False)
+    with pytest.raises(ValidationError) as caught:
+        Settings(_env_file=None, database_url=LOCAL, database_password="other-marker")
+    assert "other-marker" not in str(caught.value)
