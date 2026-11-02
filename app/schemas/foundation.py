@@ -50,6 +50,18 @@ class HealthResponse(Contract):
     trace_id: UUID
 
 
+class LivenessResponse(Contract):
+    status: Literal["ok"]
+    trace_id: UUID
+
+
+class InfoResponse(Contract):
+    agent_provider: Literal["disabled", "demo", "openai"]
+    min_notice_hours: int
+    max_horizon_days: int
+    trace_id: UUID
+
+
 class ErrorDetail(Contract):
     code: str
     message: str

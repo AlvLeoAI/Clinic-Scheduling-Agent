@@ -419,6 +419,62 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "InfoResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_provider": {
+            "enum": [
+              "disabled",
+              "demo",
+              "openai"
+            ],
+            "title": "Agent Provider",
+            "type": "string"
+          },
+          "max_horizon_days": {
+            "title": "Max Horizon Days",
+            "type": "integer"
+          },
+          "min_notice_hours": {
+            "title": "Min Notice Hours",
+            "type": "integer"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_provider",
+          "min_notice_hours",
+          "max_horizon_days",
+          "trace_id"
+        ],
+        "title": "InfoResponse",
+        "type": "object"
+      },
+      "LivenessResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "trace_id": {
+            "format": "uuid",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "trace_id"
+        ],
+        "title": "LivenessResponse",
+        "type": "object"
+      },
       "PractitionerCatalog": {
         "additionalProperties": false,
         "properties": {
@@ -1030,6 +1086,62 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "liveness_api_v1_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          }
+        },
+        "summary": "Liveness"
+      }
+    },
+    "/api/v1/info": {
+      "get": {
+        "operationId": "info_api_v1_info_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Request Entity Too Large"
+          }
+        },
+        "summary": "Info"
       }
     },
     "/api/v1/proposals": {

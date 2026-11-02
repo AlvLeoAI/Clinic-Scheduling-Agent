@@ -10,13 +10,15 @@ from app.api.auth import token_hash
 from app.core.errors import ApiError
 from app.db.models import AppointmentType, ChatSession, Clinic, Practitioner
 from app.db.session import get_db
-from app.domain.scheduling import CLINIC_ZONE, PolicyViolation
+from app.domain.scheduling import CLINIC_ZONE, MAX_HORIZON, MIN_NOTICE, PolicyViolation
 from app.schemas.foundation import (
     AppointmentTypeCatalog,
     CatalogResponse,
     ClinicCatalog,
     ErrorResponse,
     HealthResponse,
+    InfoResponse,
+    LivenessResponse,
     PractitionerCatalog,
     SessionCreateRequest,
     SessionResponse,
@@ -82,6 +84,23 @@ def catalog(request: Request, db: Session = Depends(get_db)) -> CatalogResponse:
 def health(request: Request, db: Session = Depends(get_db)) -> HealthResponse:
     db.execute(text("SELECT 1"))
     return HealthResponse(status="ok", database="ok", trace_id=request.state.trace_id)
+
+
+@router.get("/health/live", response_model=LivenessResponse)
+def liveness(request: Request) -> LivenessResponse:
+    # No database dependency: restart the process only when it cannot serve at all.
+    return LivenessResponse(status="ok", trace_id=request.state.trace_id)
+
+
+@router.get("/info", response_model=InfoResponse)
+def info(request: Request) -> InfoResponse:
+    # Configuration only: builds no provider and opens no database session.
+    return InfoResponse(
+        agent_provider=request.app.state.settings.effective_agent_provider,
+        min_notice_hours=int(MIN_NOTICE.total_seconds() // 3600),
+        max_horizon_days=MAX_HORIZON.days,
+        trace_id=request.state.trace_id,
+    )
 
 
 @router.get("/availability", response_model=AvailabilityResponse, responses=error_docs)

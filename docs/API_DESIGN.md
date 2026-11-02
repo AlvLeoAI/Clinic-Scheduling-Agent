@@ -3,7 +3,7 @@
 Base path `/api/v1`. JSON contracts are Pydantic models with UUID identifiers and
 offset-aware RFC 3339 timestamps. Errors use one sanitized envelope,
 `{error: {code, message, retryable}, trace_id}`, that never echoes request input.
-Every response carries `X-Trace-ID`. Health, catalog, session creation and
+Every response carries `X-Trace-ID`. Health, info, catalog, session creation and
 availability are public; proposal, appointment and chat routes require the owning
 session's bearer token.
 
@@ -11,7 +11,9 @@ session's bearer token.
 | --- | --- |
 | POST `/sessions` | `{}` returns a session ID, a one-time bearer token (24-hour fixed expiry) and a trace ID. |
 | GET `/catalog` | Synthetic clinic, practitioners and appointment types with their IDs. |
-| GET `/health` | Process and database connectivity. |
+| GET `/health` | Readiness: process and database connectivity (503 when the database is unreachable). |
+| GET `/health/live` | Liveness: the process can serve requests. No database access. |
+| GET `/info` | Configured agent provider (`disabled`, `demo` or `openai`) and the booking window (minimum notice hours, maximum horizon days). Reads configuration only. |
 | GET `/availability?date=YYYY-MM-DD&practitioner_id=UUID&appointment_type_id=UUID` | Read-only valid intervals; duration and timezone come from the server. |
 | POST `/proposals` | Practitioner and type UUIDs, `local_date` (YYYY-MM-DD) and `local_time` (HH:MM). 201 for a new proposal; 200 for the same live details, without renewing its TTL. |
 | GET `/proposals/{id}` | Authoritative snapshot and status for the owning session. |

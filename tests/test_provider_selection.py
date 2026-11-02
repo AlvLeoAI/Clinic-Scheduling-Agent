@@ -104,6 +104,7 @@ def test_demo_server_uses_real_clock_and_marks_responses(demo_server):
             json={"client_message_id": str(uuid4()), "message": message},
         )
 
+    assert client.get("/api/v1/info").json()["agent_provider"] == "demo"
     catalog = chat("catalog")
     assert catalog.status_code == 200
     assert catalog.headers["X-Agent-Provider"] == "demo"
@@ -131,6 +132,7 @@ def test_disabled_provider_is_final_and_writes_no_turn(engine, demo_server):
     )
     message = {"client_message_id": str(uuid4()), "message": "catalog"}
     with TestClient(create_app(disabled, engine), raise_server_exceptions=False) as client:
+        assert client.get("/api/v1/info").json()["agent_provider"] == "disabled"
         session = client.post("/api/v1/sessions", json={}).json()
         owners.append(UUID(session["session_id"]))
         headers = {"Authorization": "Bearer " + session["session_token"]}
