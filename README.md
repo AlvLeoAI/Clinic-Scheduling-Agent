@@ -42,8 +42,18 @@ after ten minutes and do not hold the slot. See [system design](SYSTEM_DESIGN.md
 
 <!-- GIF: docs/demo.gif (to be recorded) -->
 
-Live demo: coming soon. Until then, the scripted CLI demo in the quickstart below runs
-the full flow against a local database.
+Live demo: coming soon. To run the full stack locally (Docker only, no API key):
+
+```bash
+make stack-up     # PostgreSQL, one-off migrate+seed, API and Streamlit UI, demo provider
+make stack-down   # stop everything and discard the database
+```
+
+Open `http://127.0.0.1:8501`. The agent answers catalog and availability questions and
+proposes a slot; the proposal appears as a card with an expiry countdown, and only
+the separate **Confirm** button books it. The API is on `http://127.0.0.1:18000/docs`,
+and `make stack-smoke` checks the running stack. The scripted CLI demo in the
+quickstart below shows the same flow without containers.
 
 ## Three guarantees
 

@@ -1,6 +1,7 @@
 # Developer shortcuts. Every database target uses the THROWAWAY test database that
 # `make db-up` starts (tmpfs, 127.0.0.1:15433, lost on `make db-down`). compose.yaml is a
 # separate, persistent development database on 127.0.0.1:15432 and is not used here.
+# The stack-* targets run compose.demo.yaml: its own disposable database, API and UI.
 
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -20,11 +21,12 @@ RUN := env DATABASE_URL=$(DB_URL) TEST_DATABASE_URL=$(DB_URL) AGENT_PROVIDER=dis
 	CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
 	CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
 LINT_PATHS := app cli scripts alembic tests evaluations ui
+STACK := docker compose -f compose.demo.yaml
 
-.PHONY: help install db-up db-down test demo lint ci serve purge-chat
+.PHONY: help install db-up db-down test demo lint ci serve purge-chat stack-up stack-smoke stack-down
 
 help: ## List targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-11s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
 
 install: ## Create .venv and install pinned dependencies
 	$(PYTHON) -m venv $(VENV)
@@ -83,3 +85,13 @@ serve: ## API on 127.0.0.1:8000 with the demo provider, using the THROWAWAY test
 
 purge-chat: ## Dry run of the chat retention purge against the throwaway database
 	$(RUN) $(BIN)/python -m scripts.purge_chat
+
+stack-up: ## Build and start db, migrate+seed, API (127.0.0.1:18000) and UI (127.0.0.1:8501)
+	$(STACK) up -d --build --wait
+	@echo "UI: http://127.0.0.1:8501   API: http://127.0.0.1:18000/docs   (demo provider)"
+
+stack-smoke: ## Smoke-test the running stack: health, info, one demo catalog turn, UI health
+	python3 scripts/smoke_stack.py
+
+stack-down: ## Stop the stack and discard its database
+	$(STACK) down --volumes --remove-orphans

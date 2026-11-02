@@ -17,6 +17,9 @@ PostgreSQL 16 service with live model access disabled.
 | `make serve` | Migrates and seeds the **throwaway** database, then serves the API on `127.0.0.1:8000` with `AGENT_PROVIDER=demo`. |
 | `make purge-chat` | Dry run of the chat retention purge. |
 | `make db-down` | Stops the throwaway database; its data is discarded. |
+| `make stack-up` | Builds the API and UI images and starts the [container stack](#container-stack) in demo mode. |
+| `make stack-smoke` | Smoke-tests the running stack. |
+| `make stack-down` | Stops the stack and discards its database. |
 
 Two databases, two purposes:
 
@@ -195,5 +198,26 @@ HTTP logic lives in `ui/client.py` (httpx only); `tests/test_ui_client.py` cover
 with `httpx.MockTransport` in the main suite, without Streamlit. To run the page
 outside containers, install the UI lock into its own venv and run
 `PYTHONPATH=. API_BASE_URL=http://127.0.0.1:8000 streamlit run ui/app.py`.
+
+## Container stack
+
+`compose.demo.yaml` runs a disposable stack in demo mode. It is separate from
+`compose.yaml` (the persistent development database on 15432) and from the throwaway
+test database on 15433, so all three can coexist.
+
+| Service | Role |
+| --- | --- |
+| `db` | Pinned PostgreSQL on tmpfs; no published port. |
+| `migrate` | One-off `alembic upgrade head && python -m scripts.seed` from the API image, with `DATABASE_ALLOWED_HOSTS=db`. Exits when done. |
+| `api` | Starts only after `migrate` succeeds; `AGENT_PROVIDER=demo`; `127.0.0.1:18000`. |
+| `ui` | Starts once the API is healthy; `API_BASE_URL=http://api:8000`; `127.0.0.1:8501`. |
+
+```bash
+make stack-up      # build, start and wait for every health check
+make stack-smoke   # liveness, readiness, /info, one demo catalog turn, UI health
+make stack-down    # remove containers and the database
+```
+
+`scripts/smoke_stack.py` uses only the standard library, so it runs without the venv.
 
 Earlier verification receipts per commit are kept in [project history](docs/history/).

@@ -10,7 +10,9 @@ let model text reach the user (replies are rendered from templates in
 
 Shortest path: `make db-up ci db-down` (throwaway tmpfs database on 15433, every CI
 step in order). `make serve` also uses that throwaway database; compose.yaml is the
-separate persistent dev database on 15432 and must never be used for tests.
+separate persistent dev database on 15432 and must never be used for tests. The full
+container stack (`compose.demo.yaml`, its own tmpfs database) is
+`make stack-up stack-smoke stack-down`.
 
 The DB guard (`app/db/safety.py`) only accepts user `clinic_demo` on loopback with
 database `clinic_scheduling_test`/`clinic_scheduling_dev`. The suite rebuilds the
