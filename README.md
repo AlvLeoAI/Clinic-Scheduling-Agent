@@ -55,6 +55,10 @@ the separate **Confirm** button books it. The API is on `http://127.0.0.1:18000/
 and `make stack-smoke` checks the running stack. The scripted CLI demo in the
 quickstart below shows the same flow without containers.
 
+The same images deploy to an AWS sandbox (CloudFront, ECS Fargate on arm64, RDS
+PostgreSQL) with Terraform and a manual GitHub OIDC workflow. It is applied for demos
+and destroyed afterwards; see [AWS deployment](SYSTEM_DESIGN.md#aws-deployment).
+
 ## Three guarantees
 
 | Guarantee | Enforced in | Verified by |

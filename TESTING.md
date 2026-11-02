@@ -97,6 +97,11 @@ runs as uid 10001, starts the [container stack](#container-stack), runs
 `scripts/smoke_stack.py` and always tears the stack down. Locally that is
 `make stack-up stack-smoke stack-down`.
 
+Changes under `infra/` or to the workflows also run
+[`infra.yml`](.github/workflows/infra.yml), described in
+[Infrastructure checks](#infrastructure-checks). The deploy workflow never runs on
+push.
+
 ## Test markers
 
 | Marker | Meaning |
@@ -238,5 +243,37 @@ make stack-down    # remove containers and the database
 ```
 
 `scripts/smoke_stack.py` uses only the standard library, so it runs without the venv.
+
+## Infrastructure checks
+
+[`infra.yml`](.github/workflows/infra.yml) runs without AWS credentials. Locally:
+
+```bash
+infra/tools/install.sh                  # pinned Terraform and TFLint, SHA-256 verified, into ~/.local/bin
+python3 -m venv ~/.local/share/checkov-venv
+~/.local/share/checkov-venv/bin/pip install --require-hashes -r infra/tools/checkov.lock
+
+terraform fmt -check -recursive infra/terraform
+for root in infra/terraform/bootstrap infra/terraform/app; do
+  terraform -chdir=$root init -backend=false -lockfile=readonly && terraform -chdir=$root validate
+done
+tflint --init --config "$PWD/infra/terraform/.tflint.hcl"
+tflint --recursive --chdir infra/terraform --config "$PWD/infra/terraform/.tflint.hcl"
+~/.local/share/checkov-venv/bin/checkov -d infra/terraform --framework terraform --compact --quiet
+```
+
+Every checkov skip is an inline `#checkov:skip=ID:reason` next to the resource it
+covers. A plan needs SSO credentials and only reads the account:
+
+```bash
+export AWS_PROFILE=clinic-sandbox   # after: aws sso login --profile clinic-sandbox
+terraform -chdir=infra/terraform/app init
+terraform -chdir=infra/terraform/app plan -var image_tag=$(git rev-parse HEAD)
+```
+
+Before the bootstrap root has been applied, the state bucket does not exist; plan
+against local state by adding a gitignored `backend_override.tf` containing
+`terraform { backend "local" {} }` to the root, and delete it afterwards. Apply and
+destroy are run only by the owner (see [AWS deployment](SYSTEM_DESIGN.md#aws-deployment)).
 
 Earlier verification receipts per commit are kept in [project history](docs/history/).
