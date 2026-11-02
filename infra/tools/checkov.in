@@ -1,0 +1,4 @@
+# Static analysis for infra/terraform. Compile with:
+#   uv pip compile infra/tools/checkov.in --generate-hashes --python-version 3.12 \
+#     --exclude-newer 2026-10-20 -o infra/tools/checkov.lock
+checkov==3.3.29
