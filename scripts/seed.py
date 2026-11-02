@@ -1,4 +1,4 @@
-"""Non-destructive synthetic catalog upsert, only to dedicated local demo/test DBs."""
+"""Non-destructive synthetic catalog upsert, only to dedicated demo/test DBs."""
 
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,9 @@ from app.db.session import build_engine
 
 def main() -> None:
     settings = Settings()
-    require_demo_database(settings.database_url.get_secret_value())
+    require_demo_database(
+        settings.database_url.get_secret_value(), allowed_hosts=settings.allowed_database_hosts
+    )
     engine = build_engine(settings)
     try:
         with Session(engine) as db, db.begin():

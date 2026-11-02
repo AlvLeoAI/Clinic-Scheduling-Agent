@@ -12,6 +12,22 @@ birth or visit-reason fields. Sessions are anonymous.
 Chat messages are stored as sent in `conversation_items` so turns can be replayed and
 recovered. Session expiry stops authentication but does not delete them by itself.
 
+## Database targets
+
+[`app/db/safety.py`](../app/db/safety.py) checks the database URL before any connection.
+It requires the `postgresql+psycopg` driver, user `clinic_demo` and database
+`clinic_scheduling_test` or `clinic_scheduling_dev`.
+
+- **Tests and demos** (which rebuild or clean the schema) accept only
+  `clinic_scheduling_test` on `127.0.0.1`/`localhost` with no query string.
+  `DATABASE_ALLOWED_HOSTS` has no effect on them.
+- **Migrations and seeding** also accept the exact hostnames listed in
+  `DATABASE_ALLOWED_HOSTS` (comma-separated, empty by default, no wildcards or ports),
+  such as the compose service `db` or a managed database endpoint. The only query keys
+  allowed are `sslmode` and `sslrootcert`, so a managed database can use
+  `sslmode=verify-full` with its CA bundle; keys such as `host` or `options` that could
+  redirect or alter the connection are refused.
+
 ## Chat retention
 
 `python -m scripts.purge_chat --apply` removes stored chat content of every session

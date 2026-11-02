@@ -37,7 +37,9 @@ provider.
 All tests and demos use a dedicated local database. The guard in
 [`app/db/safety.py`](app/db/safety.py) refuses anything other than user `clinic_demo`
 on `127.0.0.1`/`localhost` with database `clinic_scheduling_test` (or
-`clinic_scheduling_dev` for the server). The full suite includes a migration round
+`clinic_scheduling_dev` for the server). `DATABASE_ALLOWED_HOSTS` lets migrations and
+seeding reach a listed non-loopback host (the container stack uses it); tests ignore it.
+See [Database targets](docs/SECURITY_PRIVACY.md#database-targets). The full suite includes a migration round
 trip that rebuilds the schema, so use a disposable instance. Without `make`:
 
 ```bash

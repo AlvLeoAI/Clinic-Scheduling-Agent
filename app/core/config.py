@@ -1,5 +1,6 @@
 """Runtime settings; no vendor credentials are needed and chat is disabled by default."""
 
+import re
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -7,12 +8,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
 AgentProvider = Literal["disabled", "demo", "openai"]
+HOSTNAME = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
     database_url: SecretStr
     test_database_url: SecretStr | None = None
+    # Comma-separated exact hostnames that migrations and seeding may target besides
+    # loopback (a compose service name, an RDS endpoint). Empty by default.
+    database_allowed_hosts: str = ""
     session_ttl_hours: int = Field(default=24, gt=0)
     agent_provider: AgentProvider | None = None
     # Deprecated alias: true selects "openai" when AGENT_PROVIDER is unset.
@@ -33,6 +38,20 @@ class Settings(BaseSettings):
     @classmethod
     def optional_provider(cls, value):
         return value.strip().lower() or None if isinstance(value, str) else value
+
+    @field_validator("database_allowed_hosts")
+    @classmethod
+    def exact_hostnames(cls, value: str) -> str:
+        for host in filter(None, (part.strip() for part in value.split(","))):
+            if not HOSTNAME.fullmatch(host):
+                raise ValueError("DATABASE_ALLOWED_HOSTS takes exact hostnames only.")
+        return value
+
+    @property
+    def allowed_database_hosts(self) -> frozenset[str]:
+        return frozenset(
+            filter(None, (part.strip() for part in self.database_allowed_hosts.split(",")))
+        )
 
     @property
     def effective_agent_provider(self) -> AgentProvider:
