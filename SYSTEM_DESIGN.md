@@ -108,8 +108,10 @@ What the infrastructure step will need from this design:
 - **Configuration.** Environment variables only. `DATABASE_URL` and, if ever enabled,
   `OPENAI_API_KEY` come from Secrets Manager through task-definition `secrets`. The
   deployed database keeps the name `clinic_scheduling_dev` and user `clinic_demo`,
-  which the guard requires; use `sslmode=verify-full&sslrootcert=<bundle path>` with
-  the AWS RDS CA bundle added to the image or a mounted volume.
+  which the guard requires; use
+  `sslmode=verify-full&sslrootcert=/etc/ssl/certs/rds-ca-bundle.pem`. The API image
+  downloads that AWS RDS CA bundle (us-east-2) at build time and fails the build if its
+  SHA-256 differs from the pinned value.
 - **UI sessions.** Streamlit keeps session state (including the bearer token) in
   process memory over a websocket. Run one UI task, or enable ALB stickiness; the ALB
   idle timeout must allow long-lived websockets.

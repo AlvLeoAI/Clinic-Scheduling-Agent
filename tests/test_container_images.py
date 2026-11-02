@@ -46,3 +46,12 @@ def test_api_build_context_excludes_local_state():
     allowed = [line[1:] for line in ignore if line.startswith("!")]
     for private in [".env", ".venv/", ".git/", "tests/", "docs/", "test-results/"]:
         assert not any(private.startswith(entry) for entry in allowed), private
+
+
+def test_api_image_ships_the_rds_ca_bundle_verified_by_checksum():
+    text = (ROOT / "Dockerfile").read_text()
+    url = re.search(r"^ARG RDS_CA_URL=(\S+)$", text, re.MULTILINE)
+    digest = re.search(r"^ARG RDS_CA_SHA256=([0-9a-f]{64})$", text, re.MULTILINE)
+    assert url and url.group(1).startswith("https://truststore.pki.rds.amazonaws.com/")
+    assert digest and "hexdigest() == sys.argv[2]" in text
+    assert "/etc/ssl/certs/rds-ca-bundle.pem" in text
