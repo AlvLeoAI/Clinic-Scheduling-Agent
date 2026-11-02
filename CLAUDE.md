@@ -36,6 +36,9 @@ ledgers into `docs/evidence/`.
 
 ## Rules that are easy to break
 
+- DB guard: `DATABASE_ALLOWED_HOSTS` (exact hostnames) widens only migrations and
+  seeding; the `test_only` guard stays loopback-only with no query string. Only the
+  `sslmode`/`sslrootcert` query keys are allowed. Never add wildcards or other keys.
 - Chat retention: `python -m scripts.purge_chat` (dry run) or `--apply`. It may only
   delete `conversation_items` and blank `chat_turns.request_hash` to the all-zero
   sentinel; never delete sessions, turns, proposals, appointments or idempotency rows.

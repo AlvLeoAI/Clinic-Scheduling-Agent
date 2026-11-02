@@ -28,7 +28,9 @@ def run_migrations_online():
             context.run_migrations()
         return
     settings = Settings()
-    require_demo_database(settings.database_url.get_secret_value())
+    require_demo_database(
+        settings.database_url.get_secret_value(), allowed_hosts=settings.allowed_database_hosts
+    )
     engine = build_engine(settings)
     try:
         with engine.connect() as connection:
