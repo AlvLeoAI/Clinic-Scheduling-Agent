@@ -121,6 +121,8 @@ def test_only_authorized_routes_in_openapi(client):
         "/api/v1/sessions",
         "/api/v1/catalog",
         "/api/v1/health",
+        "/api/v1/health/live",
+        "/api/v1/info",
         "/api/v1/availability",
         "/api/v1/proposals",
         "/api/v1/proposals/{id}",
@@ -130,6 +132,22 @@ def test_only_authorized_routes_in_openapi(client):
     }
     for path in ["/api/v1/unimplemented"]:
         assert_error(client.get(path), 404, "NOT_FOUND")
+
+
+def test_liveness_and_info_need_no_database(client, application):
+    def unavailable():
+        raise OperationalError("sensitive-sql-marker", {}, Exception())
+
+    application.dependency_overrides[get_db] = unavailable
+    assert client.get("/api/v1/health").status_code == 503
+    live = client.get("/api/v1/health/live")
+    assert live.status_code == 200 and live.json()["status"] == "ok"
+    info = client.get("/api/v1/info")
+    assert info.status_code == 200
+    body = info.json()
+    assert body["agent_provider"] == application.state.settings.effective_agent_provider
+    assert (body["min_notice_hours"], body["max_horizon_days"]) == (24, 90)
+    assert str(UUID(body["trace_id"])) == info.headers["X-Trace-ID"]
 
 
 def test_database_outage_sanitized(client, application):

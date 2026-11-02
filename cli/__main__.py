@@ -65,7 +65,7 @@ def scripted_demo(settings, engine):
             health = http.get("/api/v1/health")
             schema = http.get("/openapi.json")
             assert health.status_code == 200 and health.json()["database"] == "ok"
-            assert schema.status_code == 200 and len(schema.json()["paths"]) == 9
+            assert schema.status_code == 200 and len(schema.json()["paths"]) == 11
             assert http.get("/docs").status_code == 200
             for line in [
                 "catalog",

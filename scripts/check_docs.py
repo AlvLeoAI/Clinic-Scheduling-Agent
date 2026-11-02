@@ -156,7 +156,7 @@ def main():
                 )
                 links += 1
         snapshot = json.loads((ROOT / "docs/openapi.json").read_text())
-        assert snapshot == app.openapi() and len(snapshot["paths"]) == 9
+        assert snapshot == app.openapi() and len(snapshot["paths"]) == 11
         release = check_release_status()
         jargon_docs = check_phase_jargon()
         reconciliation = reconcile_m5()
@@ -165,7 +165,7 @@ def main():
                 {
                     "status": "PASS",
                     "local_links_checked": links,
-                    "openapi_operations": 9,
+                    "openapi_operations": 11,
                     "m5_reconciliation": reconciliation["status"],
                     "raw_layers": reconciliation["raw_layers"],
                     "hosted_ci_query": "NOT QUERIED BY THIS LOCAL CHECK",
