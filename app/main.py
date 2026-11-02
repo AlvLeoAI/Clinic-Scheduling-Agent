@@ -51,9 +51,13 @@ def create_app(
         if owned_engine:
             engine.dispose()
 
+    docs = settings.api_docs_enabled
     application = FastAPI(
         title="Clinic Scheduling Agent API",
         lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
         responses={413: {"model": ErrorResponse}},
     )
     # Register before the tracing middleware so even admission failures receive

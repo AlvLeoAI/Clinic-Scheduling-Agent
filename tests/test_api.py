@@ -134,6 +134,21 @@ def test_only_authorized_routes_in_openapi(client):
         assert_error(client.get(path), 404, "NOT_FOUND")
 
 
+def test_api_docs_can_be_disabled(engine, db):
+    settings = Settings(
+        _env_file=None,
+        database_url=engine.url.render_as_string(hide_password=False),
+        api_docs_enabled=False,
+    )
+    application = create_app(settings, engine, clock=lambda: NOW)
+    application.dependency_overrides[get_db] = lambda: db
+    with TestClient(application, raise_server_exceptions=False) as test_client:
+        for path in ["/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"]:
+            assert_error(test_client.get(path), 404, "NOT_FOUND")
+        assert test_client.get("/api/v1/health/live").status_code == 200
+    assert application.openapi()["paths"]
+
+
 def test_liveness_and_info_need_no_database(client, application):
     def unavailable():
         raise OperationalError("sensitive-sql-marker", {}, Exception())
