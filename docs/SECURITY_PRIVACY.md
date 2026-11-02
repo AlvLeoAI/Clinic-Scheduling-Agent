@@ -63,9 +63,52 @@ no live lease. Without `--apply` it is a dry run that only reports counts.
   bearer expiry, so no chat or confirmation replay can reach the removed state.
 
 The command locks candidate sessions with `SKIP LOCKED`, so it never races an active
-chat request, and it is idempotent. It is not scheduled yet; a daily cron job, a
-Railway cron service or an EventBridge rule running a scheduled container task with
-`python -m scripts.purge_chat --apply` would each be enough.
+chat request, and it is idempotent. The AWS sandbox runs it daily as an EventBridge
+Scheduler task, connected as `clinic_app`; locally it runs only when invoked.
+
+## AWS sandbox exposure
+
+The sandbox (see [system design](../SYSTEM_DESIGN.md#aws-deployment)) publishes the
+Streamlit UI at a `*.cloudfront.net` address. **The public UI has no authentication
+and no rate limiting.** Anyone with the address gets an anonymous session and can read
+availability, create proposals and book synthetic appointments, consuming demo
+capacity.
+
+That is acceptable only in the mode it is deployed in:
+
+- The agent provider is `demo`, so no request reaches a paid model, and all data is
+  synthetic.
+- The stack is applied for a demo and destroyed afterwards, not left running.
+- Compute is one fixed-size task per service with no autoscaling, so traffic cannot
+  multiply the bill; the CloudFront free tier covers demo traffic, and the owner
+  watches spend with budgets in the AWS console.
+- The API has no public route, and its Swagger UI, ReDoc and OpenAPI document are
+  turned off (`API_DOCS_ENABLED=false`).
+
+Before the sandbox runs continuously or with `AGENT_PROVIDER=openai`, the planned
+control is AWS WAF on the CloudFront distribution with rate-based rules per client IP
+(plus the AWS managed common rule set), followed by an identity layer. Live mode
+also needs the owner's explicit go-ahead because each turn costs money.
+
+Remaining network exposure, by design:
+
+- Tasks have public IPv4 addresses so they can reach AWS APIs without a NAT gateway.
+  No security-group rule admits inbound traffic to them from the internet.
+- UI, API and one-off tasks may open HTTPS to any address. A compromised container
+  could send data out over 443. Private subnets with interface endpoints would close
+  this.
+- Traffic inside the VPC is plain HTTP: CloudFront's VPC-origin interfaces to the
+  internal ALB, the ALB to the UI, and the UI to the API, which carries the session
+  bearer. TLS covers browser to CloudFront and the API to the database
+  (`verify-full`, with `rds.force_ssl` on).
+- The ALB accepts HTTP from the private subnets, where CloudFront places its VPC-origin
+  interfaces. The database also lives there but has no egress rules.
+- The deploy role can be assumed only by workflow jobs in the `aws-sandbox` GitHub
+  environment (main branch, required reviewer). It can push images, register task
+  definitions (an action AWS does not scope by resource), run the migrate task and
+  update the two services. In effect, it can deploy any code under this stack's
+  execution roles, so the reviewer approval is the control. It cannot change IAM, read
+  Terraform state or reach the database.
 
 ## Authentication and ownership
 
@@ -106,7 +149,8 @@ checked separately with gitleaks (see the README). Tests block all real HTTP.
 - **No identity or rate limiting.** Anyone who can reach the API can create sessions
   and proposals and consume appointment capacity; aggregate provider calls and stored
   state are not budgeted. Do not expose the API to untrusted clients without an
-  identity and admission layer.
+  identity and admission layer. The AWS sandbox exposes only the UI, under the
+  conditions in [AWS sandbox exposure](#aws-sandbox-exposure).
 - **Request admission is size-only.** Bodies over 64 KiB are rejected; there is no
   request-rate or slow-client control.
 - **Stale-intent ordering is conservative.** Older unfinished turns that cannot prove
@@ -116,9 +160,10 @@ checked separately with gitleaks (see the README). Tests block all real HTTP.
   downloaded artifacts.
 - **Privileged SQL bypasses service rules.** Policy and immutability are enforced in
   services and constraints, not by triggers on every field.
-- **Local only.** Loopback examples, local databases and the container stack do not
-  imply an encrypted or hardened deployment. The stack's database password is a fixed
-  demo value (override with `DEMO_DB_PASSWORD`); its database publishes no port.
+- **Demo deployments only.** Loopback examples, local databases and the container
+  stack do not imply an encrypted or hardened deployment. The local stack's database
+  password is a fixed demo value (override with `DEMO_DB_PASSWORD`); its database
+  publishes no port. The AWS sandbox is a short-lived demo, not production hosting.
 - **The UI is a demo client.** It has no login: whoever reaches it gets an anonymous
   session. It keeps the bearer token in server-side Streamlit state, hides error
   tracebacks and disables usage statistics.

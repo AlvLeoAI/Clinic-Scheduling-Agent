@@ -69,4 +69,12 @@ ledgers into `docs/evidence/`.
 - No hardcoded test counts or commit hashes in current docs; the README CI badge is
   the status.
 - Don't alter the README "Security history" section without the owner.
+- AWS (`infra/terraform/`): account 086739225026, us-east-2, `AWS_PROFILE=clinic-sandbox`
+  (SSO) for local runs; never another profile, never IAM users or access keys. Every
+  root keeps `allowed_account_ids` and no `profile` in the provider. Only fmt, validate,
+  tflint, checkov and `plan` may be run; never `terraform apply` or `destroy` (the
+  owner runs them). Static checks: TESTING.md "Infrastructure checks". Before bootstrap
+  exists, plan with a gitignored `backend_override.tf` (local backend), then delete it.
+- `check_docs` rejects `\bS[1-5]\b` as a phase code, so write "state bucket", not the
+  service's short name, in current docs.
 - Commit and push only when asked; work on a branch; the owner merges PRs.

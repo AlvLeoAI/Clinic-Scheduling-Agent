@@ -11,8 +11,9 @@ source-only contents and the separate status of installed dependencies.
 The images built from `Dockerfile` and `ui/Dockerfile` contain the official
 `python:3.12-slim` base image and the packages pinned in `requirements-runtime.lock`
 and `ui/requirements.lock` (including Streamlit, Apache-2.0), each under its own
-license. They are built locally and in CI and are not published; anyone who
-distributes them must carry those packages' notices.
+license. They are built locally and in CI, and the deploy workflow pushes them to a
+private Amazon ECR registry in the project's AWS account; they are not published
+publicly. Anyone who distributes them must carry those packages' notices.
 
 The API image also contains the public Amazon RDS CA certificate bundle for us-east-2,
 downloaded from `truststore.pki.rds.amazonaws.com` at build time and verified by

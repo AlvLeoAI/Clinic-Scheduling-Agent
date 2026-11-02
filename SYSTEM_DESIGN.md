@@ -18,9 +18,10 @@ The architecture diagram is in the [README](README.md#architecture).
 | `app/db/`, `alembic/` | Ten-table schema with ownership, uniqueness and exclusion constraints; synthetic catalog seed. |
 | `evaluations/` | Independent interval oracle and separate raw, backend and visible graders; versioned contracts. |
 | `app/services/retention.py` | Purges stored chat content of sessions expired beyond `CHAT_RETENTION_DAYS`; never touches bookings. |
-| `scripts/` | Guarded demo setup and cleanup, concurrency demo, chat retention purge, current-tree secret check, doc checks. |
+| `scripts/` | Guarded demo setup and cleanup, runtime database role, concurrency demo, chat retention purge, current-tree secret check, doc checks. |
 | `ui/` | Streamlit demo client. Reads and proposes through the API; books only through the confirm endpoint with one idempotency key per proposal. No database access. |
 | `Dockerfile`, `ui/Dockerfile`, `compose.demo.yaml` | Pinned non-root API and UI images, and a one-command local stack with a one-off migrate+seed step. |
+| `infra/terraform/`, `.github/workflows/deploy.yml` | AWS sandbox: bootstrap (state, ECR, OIDC deploy role) and app (VPC, RDS, Fargate, CloudFront) roots; manual OIDC deploy workflow. |
 
 ## Scheduling policy
 
@@ -84,46 +85,156 @@ outside the service safety boundary.
 
 ## Deployment shape
 
-Locally, `compose.demo.yaml` runs the same images and steps a cloud deployment would
-use; see [testing](TESTING.md#container-stack).
+Locally, `compose.demo.yaml` runs the same images and steps as the AWS deployment;
+see [testing](TESTING.md#container-stack).
 
-| Piece | Locally | Intended on ECS Fargate |
+| Piece | Locally | AWS sandbox (`infra/terraform/app`) |
 | --- | --- | --- |
-| API | `api` service, `uvicorn` on 8000 | Service behind an ALB, arm64 (Graviton) task |
-| UI | `ui` service on 8501 | Separate service behind the ALB |
-| Schema and catalog | One-off `migrate` service | One-off `run-task` with the same image and a command override, before each deploy |
-| Chat retention | `make purge-chat` | Scheduled task (EventBridge) running `python -m scripts.purge_chat --apply` |
-| Database | tmpfs PostgreSQL, `DATABASE_ALLOWED_HOSTS=db` | RDS PostgreSQL 16 over TLS, `DATABASE_ALLOWED_HOSTS=<endpoint>` |
+| UI | `ui` service on 8501 | One arm64 Fargate task behind an internal ALB, published only through CloudFront |
+| API | `api` service, `uvicorn` on 8000 | One arm64 Fargate task, no load balancer, reachable only from the UI at `api.clinic.internal` (Cloud Map DNS) |
+| Schema and catalog | One-off `migrate` service | One-off `run-task` (migrate, seed, runtime role) before each service update |
+| Chat retention | `make purge-chat` | EventBridge Scheduler task running `python -m scripts.purge_chat --apply` daily |
+| Database | tmpfs PostgreSQL, `DATABASE_ALLOWED_HOSTS=db` | RDS PostgreSQL 16, private subnets, `sslmode=verify-full` |
 
 Two health endpoints: `/api/v1/health/live` never touches the database and is the
 container health check; `/api/v1/health` is readiness and returns 503 when the
-database is unreachable.
+database is unreachable. ECS ignores a Dockerfile `HEALTHCHECK`, so the task
+definitions repeat the same probes (every 30 s).
 
-What the infrastructure step will need from this design:
+## AWS deployment
 
-- **Health checks.** ECS ignores a Dockerfile `HEALTHCHECK`, so each task definition
-  needs its own (liveness for the container). Point the ALB target group at liveness
-  too, or at readiness only with a generous unhealthy threshold, so a database blip
-  does not cycle every task.
-- **Configuration.** Environment variables only. `DATABASE_URL` and, if ever enabled,
-  `OPENAI_API_KEY` come from Secrets Manager through task-definition `secrets`. The
-  deployed database keeps the name `clinic_scheduling_dev` and user `clinic_demo`,
-  which the guard requires; use
-  `sslmode=verify-full&sslrootcert=/etc/ssl/certs/rds-ca-bundle.pem`. The API image
-  downloads that AWS RDS CA bundle (us-east-2) at build time and fails the build if its
-  SHA-256 differs from the pinned value.
-- **UI sessions.** Streamlit keeps session state (including the bearer token) in
-  process memory over a websocket. Run one UI task, or enable ALB stickiness; the ALB
-  idle timeout must allow long-lived websockets.
-- **Proxy headers.** `uvicorn --proxy-headers` trusts `X-Forwarded-*` from
-  `FORWARDED_ALLOW_IPS` (default `127.0.0.1`); set it to the VPC range.
-- **Images.** Push the arm64 builds to ECR; CI already builds and smoke-tests them on
-  native arm64 runners.
-- **Exposure.** There is no identity or rate limiting (see
-  [security and privacy](docs/SECURITY_PRIVACY.md#known-limitations)); a public demo
-  needs at least WAF rate rules, and chat should stay on the `demo` provider.
-- **Logs.** One JSON line per request on stderr (successful liveness probes are not
-  logged); `awslogs` captures stdout and stderr.
+The sandbox runs in one AWS account and region (us-east-2). Every Terraform root sets
+`allowed_account_ids`, so a plan or apply under any other account fails. Local runs
+take credentials from the SSO profile in `AWS_PROFILE`; no provider block names a
+profile, and CI uses GitHub OIDC. It is meant to be applied for a demo and destroyed
+afterwards.
+
+```text
+browser --HTTPS--> CloudFront (*.cloudfront.net, HSTS) --VPC origin--> internal ALB :80
+        --> UI task :8501 --> api.clinic.internal:8000 (API task) --> RDS :5432 (TLS)
+```
+
+- **Roots.** `infra/terraform/bootstrap` holds what must outlive the app: the
+  versioned, TLS-only state bucket (native lock file, `use_lockfile`), the two ECR
+  repositories (immutable tags, scan on push, keep 10 tagged images), the GitHub OIDC
+  provider and the deploy role. `infra/terraform/app` holds everything else.
+- **Network.** Tasks run in public subnets with a public IP so they can reach ECR,
+  Secrets Manager and CloudWatch Logs without a NAT gateway. Security groups admit no
+  inbound traffic except ALB to UI (8501) and UI to API (8000). Egress is limited to
+  HTTPS for the UI, API and one-off tasks, plus PostgreSQL to the database for the API
+  and one-off tasks. RDS and the internal ALB sit in private subnets with no route out
+  of the VPC; RDS has no egress rules. See
+  [security and privacy](docs/SECURITY_PRIVACY.md#aws-sandbox-exposure).
+- **HTTPS.** CloudFront is the only public endpoint: viewer HTTP is redirected to
+  HTTPS and responses carry `Strict-Transport-Security: max-age=31536000;
+  includeSubDomains`. The origin is a CloudFront VPC origin pointing at an internal ALB,
+  so the ALB has no public address to bypass. Caching is disabled and the AllViewer
+  origin request policy forwards Host, cookies and the WebSocket upgrade, so
+  Streamlit's same-origin checks see the CloudFront hostname. The ALB idle timeout is
+  300 s and Streamlit pings its websocket every 30 s.
+- **Database and secrets.** The master user `clinic_demo` owns the schema; its password
+  is an RDS-managed secret that Terraform never sees. The runtime role `clinic_app`
+  (row access only, see [database roles](docs/SECURITY_PRIVACY.md#database-roles)) gets
+  a password that Terraform generates as an ephemeral value and writes to Secrets
+  Manager as a write-only argument, so it is in neither state nor plan files. Task
+  definitions carry password-less `DATABASE_URL`s and receive `DATABASE_PASSWORD` from
+  Secrets Manager. Only the migrate task uses `clinic_demo`.
+- **Task settings.** `AGENT_PROVIDER=demo`, `API_DOCS_ENABLED=false` (no Swagger, ReDoc
+  or OpenAPI document), `FORWARDED_ALLOW_IPS` set to the VPC range, read-only root
+  filesystems, uid 10001, logs to CloudWatch with seven-day retention. There are no task
+  roles: the containers call no AWS API.
+- **Deploys.** `.github/workflows/deploy.yml` (manual) builds arm64 images on a native
+  runner, pushes them tagged with the commit SHA, registers new task-definition
+  revisions, runs the migrate task and stops on a non-zero exit, then updates both
+  services and fails if a circuit-breaker rollback left the old revision running.
+  Terraform creates the first revision of each family and ignores later ones on the
+  services; the purge schedule names the family without a revision, so it runs the
+  latest. `terraform apply` and `destroy` are never run from CI.
+
+### First deployment
+
+Prerequisites: `infra/tools/install.sh` (Terraform and TFLint, SHA-256 verified),
+`aws sso login --profile clinic-sandbox` and `export AWS_PROFILE=clinic-sandbox`.
+
+1. **Bootstrap.** Its state bucket does not exist yet, so the first apply uses local
+   state and then moves it into the bucket:
+
+   ```bash
+   cd infra/terraform/bootstrap
+   printf 'terraform {\n  backend "local" {}\n}\n' > backend_override.tf  # gitignored
+   terraform init && terraform apply
+   rm backend_override.tf && terraform init -migrate-state
+   rm terraform.tfstate terraform.tfstate.backup  # once the migration is confirmed
+   ```
+
+2. **GitHub environment.** In the repository settings, open Environments and create
+   `aws-sandbox`. Under Deployment branches and tags choose Selected branches and add
+   `main`. Under Required reviewers add yourself, leaving self-review allowed. Add the
+   environment variable `AWS_DEPLOY_ROLE_ARN` with the bootstrap output
+   `deploy_role_arn`. No secrets are needed: the role is assumed through OIDC, and only
+   jobs in this environment can assume it.
+3. **Images.** Run "Deploy to AWS sandbox" from the Actions tab on `main` and approve
+   it. With no app stack yet, it only pushes the images.
+4. **App.** `cd infra/terraform/app && terraform init && terraform apply -var
+   image_tag=<that commit SHA>`. The services start, but the API cannot reach its
+   database role until step 5.
+5. **Release.** Run the deploy workflow again. It migrates, seeds, creates
+   `clinic_app` and rolls both services.
+6. **Check.** Open `terraform output -raw url` and run a full propose-and-confirm in
+   demo mode: the page must stay connected (no "Connection error"), and
+   `curl -sI http://<domain>` must answer with a redirect to HTTPS. If the websocket
+   fails through the VPC origin, the fallback is an internet-facing ALB whose security
+   group admits only the CloudFront origin-facing managed prefix list, with a listener
+   rule that requires a secret custom header set by CloudFront. It needs no app change.
+
+Later releases: merge to `main` and run the deploy workflow. Infrastructure changes:
+`terraform apply -var image_tag=<deployed SHA>`, where the deployed SHA is the tag
+printed by `aws ecs describe-task-definition --task-definition clinic-api --query
+'taskDefinition.containerDefinitions[0].image'`.
+To rotate the `clinic_app` password, increase `app_password_version`, apply, then run
+the deploy workflow.
+
+### Cost (us-east-2, on-demand, running all month)
+
+| Item | USD/month |
+| --- | --- |
+| RDS db.t4g.micro single-AZ | 11.68 |
+| RDS gp3, 20 GB | 2.30 |
+| Fargate API, 0.25 vCPU / 0.5 GB arm64 | 7.21 |
+| Fargate UI, 0.25 vCPU / 0.5 GB arm64 | 7.21 |
+| Internal ALB, hourly plus about 0.1 LCU | 17.00 |
+| Public IPv4, two task addresses | 7.30 |
+| Secrets Manager, app secret plus RDS-managed secret | 0.80 |
+| CloudWatch Logs, seven-day retention | ~0.50 |
+| Cloud Map private DNS zone | 0.50 |
+| ECR storage | ~0.30 |
+| CloudFront (free tier), state bucket, scheduler, one-off tasks | ~0.10 |
+| **Total** | **~55** |
+
+That is about $0.08 an hour, so a demo applied and destroyed the same day costs well
+under a dollar. Every resource carries the tag `Project=clinic-scheduling-agent`.
+Budgets are managed in the AWS console, not in Terraform.
+
+### Teardown
+
+```bash
+cd infra/terraform/app && terraform destroy -var image_tag=<deployed SHA>
+```
+
+This removes the network, database, services, load balancer, distribution, schedule,
+log groups and secrets. The database keeps no final snapshot and its automated
+backups are deleted; the app secret has no recovery window. Disabling the CloudFront
+distribution makes the destroy take several minutes. What survives:
+
+- the bootstrap root: state bucket (with old state versions for 90 days), OIDC
+  provider, deploy role and ECR repositories with their images (cents per month);
+- task-definition revisions registered by the deploy workflow (free); deregister
+  them with `aws ecs deregister-task-definition` if wanted.
+
+Removing the bootstrap root too means deleting the ECR images, removing
+`prevent_destroy` from the state bucket, moving its state back to local with a
+`backend_override.tf`, running `terraform destroy`, and finally deleting the remaining
+object versions in the state bucket.
 
 ## Key decisions
 
@@ -139,6 +250,10 @@ What the infrastructure step will need from this design:
 | Independent graders per layer | Safe backend behaviour cannot hide a wrong model decision. |
 | Migrations as a one-off task, never on container start | Concurrent tasks never race on schema changes, and a failed migration blocks the deploy instead of crash-looping the service. |
 | Separate liveness and readiness | Restarts only for a dead process; database outages surface as 503 readiness, not restarts. |
+| Separate schema owner and runtime database role | The long-running API holds row access only; the RDS master user, which has `rds_superuser`, is used only by the one-off migrate task. |
+| Public-IP tasks instead of a NAT gateway or interface endpoints | About $22 to $51 a month cheaper; security groups admit no inbound traffic to the tasks, and egress is HTTPS only (plus PostgreSQL for the API). Interface endpoints are the upgrade path, with no app change. |
+| CloudFront VPC origin to an internal ALB | HTTPS on the default certificate with no domain to buy, and no public load balancer to bypass. |
+| Cloud Map DNS instead of Service Connect | No Envoy sidecar, whose recommended CPU would double each 0.25-vCPU task. |
 
 See [API design](docs/API_DESIGN.md), [evaluation](docs/EVALUATION.md) and
 [security and privacy](docs/SECURITY_PRIVACY.md).
