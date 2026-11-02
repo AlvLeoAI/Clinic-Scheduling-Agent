@@ -19,6 +19,8 @@ The architecture diagram is in the [README](README.md#architecture).
 | `evaluations/` | Independent interval oracle and separate raw, backend and visible graders; versioned contracts. |
 | `app/services/retention.py` | Purges stored chat content of sessions expired beyond `CHAT_RETENTION_DAYS`; never touches bookings. |
 | `scripts/` | Guarded demo setup and cleanup, concurrency demo, chat retention purge, current-tree secret check, doc checks. |
+| `ui/` | Streamlit demo client. Reads and proposes through the API; books only through the confirm endpoint with one idempotency key per proposal. No database access. |
+| `Dockerfile`, `ui/Dockerfile`, `compose.demo.yaml` | Pinned non-root API and UI images, and a one-command local stack with a one-off migrate+seed step. |
 
 ## Scheduling policy
 
@@ -80,6 +82,46 @@ Application services enforce business hours, grid, notice and horizon, and immut
 proposal fields. No database trigger enforces every business rule; privileged SQL is
 outside the service safety boundary.
 
+## Deployment shape
+
+Locally, `compose.demo.yaml` runs the same images and steps a cloud deployment would
+use; see [testing](TESTING.md#container-stack).
+
+| Piece | Locally | Intended on ECS Fargate |
+| --- | --- | --- |
+| API | `api` service, `uvicorn` on 8000 | Service behind an ALB, arm64 (Graviton) task |
+| UI | `ui` service on 8501 | Separate service behind the ALB |
+| Schema and catalog | One-off `migrate` service | One-off `run-task` with the same image and a command override, before each deploy |
+| Chat retention | `make purge-chat` | Scheduled task (EventBridge) running `python -m scripts.purge_chat --apply` |
+| Database | tmpfs PostgreSQL, `DATABASE_ALLOWED_HOSTS=db` | RDS PostgreSQL 16 over TLS, `DATABASE_ALLOWED_HOSTS=<endpoint>` |
+
+Two health endpoints: `/api/v1/health/live` never touches the database and is the
+container health check; `/api/v1/health` is readiness and returns 503 when the
+database is unreachable.
+
+What the infrastructure step will need from this design:
+
+- **Health checks.** ECS ignores a Dockerfile `HEALTHCHECK`, so each task definition
+  needs its own (liveness for the container). Point the ALB target group at liveness
+  too, or at readiness only with a generous unhealthy threshold, so a database blip
+  does not cycle every task.
+- **Configuration.** Environment variables only. `DATABASE_URL` and, if ever enabled,
+  `OPENAI_API_KEY` come from Secrets Manager through task-definition `secrets`. The
+  deployed database keeps the name `clinic_scheduling_dev` and user `clinic_demo`,
+  which the guard requires; use `sslmode=verify-full&sslrootcert=<bundle path>` with
+  the AWS RDS CA bundle added to the image or a mounted volume.
+- **UI sessions.** Streamlit keeps session state (including the bearer token) in
+  process memory over a websocket. Run one UI task, or enable ALB stickiness; the ALB
+  idle timeout must allow long-lived websockets.
+- **Proxy headers.** `uvicorn --proxy-headers` trusts `X-Forwarded-*` from
+  `FORWARDED_ALLOW_IPS` (default `127.0.0.1`); set it to the VPC range.
+- **Images.** Push the arm64 builds to ECR; CI already builds and smoke-tests them on
+  native arm64 runners.
+- **Exposure.** There is no identity or rate limiting (see
+  [security and privacy](docs/SECURITY_PRIVACY.md#known-limitations)); a public demo
+  needs at least WAF rate rules, and chat should stay on the `demo` provider.
+- **Logs.** One JSON line per request on stderr; `awslogs` captures stdout and stderr.
+
 ## Key decisions
 
 | Decision | Rationale |
@@ -92,6 +134,8 @@ outside the service safety boundary.
 | REST over `httpx` instead of an SDK | Injectable transport for fully offline tests. |
 | One `ResponsesProvider` protocol with a registry | `demo` and `openai` share the loop; another provider (for example Anthropic) is a new registry entry that translates its API to Responses-style items. |
 | Independent graders per layer | Safe backend behaviour cannot hide a wrong model decision. |
+| Migrations as a one-off task, never on container start | Concurrent tasks never race on schema changes, and a failed migration blocks the deploy instead of crash-looping the service. |
+| Separate liveness and readiness | Restarts only for a dead process; database outages surface as 503 readiness, not restarts. |
 
 See [API design](docs/API_DESIGN.md), [evaluation](docs/EVALUATION.md) and
 [security and privacy](docs/SECURITY_PRIVACY.md).

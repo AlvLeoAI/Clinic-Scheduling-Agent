@@ -6,6 +6,14 @@ material. It does not assign third-party ownership to the project author.
 See [source distribution scope](docs/history/SOURCE_DISTRIBUTION.md) for the proposed
 source-only contents and the separate status of installed dependencies.
 
+## Container images
+
+The images built from `Dockerfile` and `ui/Dockerfile` contain the official
+`python:3.12-slim` base image and the packages pinned in `requirements-runtime.lock`
+and `ui/requirements.lock` (including Streamlit, Apache-2.0), each under its own
+license. They are built locally and in CI and are not published; anyone who
+distributes them must carry those packages' notices.
+
 ## Alembic generic migration template
 
 - Included file: [alembic/script.py.mako](alembic/script.py.mako).
