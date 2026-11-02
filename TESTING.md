@@ -124,6 +124,17 @@ runs as uid 10001, starts the [container stack](#container-stack), runs
   `.local/cli_state.json` (mode 0600). After an uncertain confirmation, repeat the same
   `confirm` with the same state to reuse its idempotency key.
 
+## Runtime database role
+
+```bash
+CLINIC_APP_PASSWORD=<16+ characters> .venv/bin/python -m scripts.db_roles
+```
+
+Creates or updates `clinic_app` with row access only (see
+[Database roles](docs/SECURITY_PRIVACY.md#database-roles)); re-running it resets the
+password and re-applies grants. `tests/test_db_roles.py` checks the grants and that DDL
+is refused, and drops the role afterwards.
+
 ## Chat retention
 
 ```bash
