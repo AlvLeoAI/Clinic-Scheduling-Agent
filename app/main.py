@@ -1,4 +1,4 @@
-"""M1–M3 backend; no legacy modules, provider imports or agent orchestration."""
+"""FastAPI application factory: routers, body admission, request tracing and error envelopes."""
 
 import json
 import logging
@@ -49,7 +49,7 @@ def create_app(
             engine.dispose()
 
     application = FastAPI(
-        title="Clinic Scheduling Agent — foundation",
+        title="Clinic Scheduling Agent API",
         lifespan=lifespan,
         responses={413: {"model": ErrorResponse}},
     )

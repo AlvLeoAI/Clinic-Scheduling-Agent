@@ -21,8 +21,7 @@ session's bearer token.
 
 Run the server (see [testing](../TESTING.md#running-the-server)) and open
 `http://127.0.0.1:8000/docs`, or use the checked-in [OpenAPI snapshot](openapi.json);
-`scripts/check_docs.py` verifies it matches the app. The API title still says
-"foundation"; the routes and contracts above are authoritative.
+`scripts/check_docs.py` verifies it matches the app.
 
 ## Proposals
 
