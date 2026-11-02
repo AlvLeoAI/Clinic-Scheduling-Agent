@@ -24,6 +24,8 @@ session's bearer token.
 Run the server (see [testing](../TESTING.md#running-the-server)) and open
 `http://127.0.0.1:8000/docs`, or use the checked-in [OpenAPI snapshot](openapi.json);
 `scripts/check_docs.py` verifies it matches the app.
+`API_DOCS_ENABLED=false` turns off `/docs`, `/redoc` and `/openapi.json` (they return
+404); the deployed API runs that way.
 
 ## Proposals
 
