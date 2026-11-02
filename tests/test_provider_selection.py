@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.agent.demo_provider import DemoProvider
@@ -118,3 +118,40 @@ def test_demo_server_uses_real_clock_and_marks_responses(demo_server):
     proposed = chat(f"propose {day} 09:00 {PRACTITIONER_IDS[0]} {TYPE_IDS[0]}")
     assert proposed.status_code == 200
     assert proposed.json()["proposal"]["status"] == "PENDING"
+
+
+@pytest.mark.postgres
+@pytest.mark.api
+def test_disabled_provider_is_final_and_writes_no_turn(engine, demo_server):
+    _, owners = demo_server
+    disabled = Settings(
+        _env_file=None,
+        database_url=engine.url.render_as_string(hide_password=False),
+        agent_provider="disabled",
+    )
+    message = {"client_message_id": str(uuid4()), "message": "catalog"}
+    with TestClient(create_app(disabled, engine), raise_server_exceptions=False) as client:
+        session = client.post("/api/v1/sessions", json={}).json()
+        owners.append(UUID(session["session_id"]))
+        headers = {"Authorization": "Bearer " + session["session_token"]}
+        response = client.post("/api/v1/chat/messages", headers=headers, json=message)
+    assert response.status_code == 501
+    assert response.json()["error"] == {
+        "code": "AGENT_PROVIDER_DISABLED",
+        "message": "Chat is disabled on this server: no agent provider is configured.",
+        "retryable": False,
+    }
+    assert "X-Agent-Provider" not in response.headers
+    with Session(engine) as db:
+        assert (
+            db.scalar(
+                select(func.count()).select_from(ChatTurn).where(ChatTurn.session_id == owners[-1])
+            )
+            == 0
+        )
+
+    # The same message ID is processed once a provider is configured.
+    client, _ = demo_server
+    enabled = client.post("/api/v1/chat/messages", headers=headers, json=message)
+    assert enabled.status_code == 200
+    assert enabled.headers["X-Agent-Provider"] == "demo"

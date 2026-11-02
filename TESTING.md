@@ -94,7 +94,7 @@ API key. `AGENT_PROVIDER` selects the chat provider:
 
 | Value | Chat behaviour |
 | --- | --- |
-| `disabled` (default) | `POST /api/v1/chat/messages` returns 503; no provider is configured. |
+| `disabled` (default) | `POST /api/v1/chat/messages` returns 501 `AGENT_PROVIDER_DISABLED` (not retryable) and stores nothing. |
 | `demo` | The CLI's scripted command grammar, served with the real clock. |
 | `openai` | OpenAI Responses API; requires `OPENAI_API_KEY` and `OPENAI_MODEL`. Paid. |
 

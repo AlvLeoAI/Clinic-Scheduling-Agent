@@ -59,6 +59,11 @@ after fetching the appointment.
 - The server's chat provider comes from `AGENT_PROVIDER`. Every chat response carries
   `X-Agent-Provider` (`demo` or `openai`) naming the provider configured when it was
   served; a replayed turn reports the current configuration, not the original one.
+- With `AGENT_PROVIDER=disabled` (the default), chat returns 501
+  `AGENT_PROVIDER_DISABLED` with `retryable: false`. It is checked after authentication
+  and before any turn is stored, so the same `client_message_id` works once a provider
+  is configured. Provider outages and timeouts remain 503 `SERVICE_UNAVAILABLE` with
+  `retryable: true`.
 - Retrying a completed message replays its turn, message and trace, but refreshes the
   attached proposal's status, so the JSON can differ from the first response.
 - A second request while a turn is in progress returns 409 `TURN_IN_PROGRESS`.
