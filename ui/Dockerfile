@@ -1,5 +1,6 @@
 # UI image (build context: ui/). It talks only to the API at API_BASE_URL and has no
-# database driver. Streamlit keeps session state in process memory.
+# database driver. Streamlit keeps session state in process memory. The 30 s websocket
+# ping keeps idle sessions open through CloudFront and the load balancer (idle 300 s).
 ARG PYTHON_IMAGE=python:3.12-slim@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30
 
 FROM ${PYTHON_IMAGE} AS build
@@ -11,7 +12,7 @@ FROM ${PYTHON_IMAGE}
 ENV PATH=/opt/venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/srv \
     STREAMLIT_BROWSER_GATHER_USAGE_STATS=false STREAMLIT_SERVER_HEADLESS=true \
     STREAMLIT_SERVER_FILE_WATCHER_TYPE=none STREAMLIT_CLIENT_TOOLBAR_MODE=minimal \
-    STREAMLIT_CLIENT_SHOW_ERROR_DETAILS=false
+    STREAMLIT_CLIENT_SHOW_ERROR_DETAILS=false STREAMLIT_SERVER_WEBSOCKET_PING_INTERVAL=30
 RUN useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin clinic
 WORKDIR /srv
 COPY --from=build /opt/venv /opt/venv

@@ -55,3 +55,9 @@ def test_api_image_ships_the_rds_ca_bundle_verified_by_checksum():
     assert url and url.group(1).startswith("https://truststore.pki.rds.amazonaws.com/")
     assert digest and "hexdigest() == sys.argv[2]" in text
     assert "/etc/ssl/certs/rds-ca-bundle.pem" in text
+
+
+def test_ui_image_keeps_websockets_alive_behind_a_proxy():
+    text = (ROOT / "ui/Dockerfile").read_text()
+    ping = re.search(r"STREAMLIT_SERVER_WEBSOCKET_PING_INTERVAL=(\d+)", text)
+    assert ping and 0 < int(ping.group(1)) < 300
