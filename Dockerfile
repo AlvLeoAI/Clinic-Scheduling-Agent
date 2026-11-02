@@ -26,7 +26,7 @@ COPY --from=build /tmp/rds-ca-bundle.pem /etc/ssl/certs/rds-ca-bundle.pem
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY app ./app
-COPY scripts/__init__.py scripts/seed.py scripts/purge_chat.py ./scripts/
+COPY scripts/__init__.py scripts/seed.py scripts/purge_chat.py scripts/db_roles.py ./scripts/
 USER 10001
 EXPOSE 8000
 # Liveness only: readiness (/api/v1/health) also checks the database.

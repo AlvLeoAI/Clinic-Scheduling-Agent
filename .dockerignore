@@ -8,6 +8,7 @@
 !scripts/__init__.py
 !scripts/seed.py
 !scripts/purge_chat.py
+!scripts/db_roles.py
 **/__pycache__
 **/*.pyc
 **/.env*

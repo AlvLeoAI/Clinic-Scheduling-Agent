@@ -32,6 +32,19 @@ It requires the `postgresql+psycopg` driver, user `clinic_demo` and database
 check, so a secret store can inject the password alone. Setting both a URL password
 and `DATABASE_PASSWORD` is rejected. Neither value appears in settings errors or reprs.
 
+## Database roles
+
+A deployment can separate the schema owner from the runtime user.
+`python -m scripts.db_roles`, run as `clinic_demo` through the same guard right after
+migrations, creates or updates the role `clinic_app` with the password in
+`CLINIC_APP_PASSWORD` (at least 16 characters). `clinic_app` gets `SELECT`, `INSERT`,
+`UPDATE` and `DELETE` on the application tables and read-only access to
+`alembic_version`; it owns nothing and cannot create, alter, drop or truncate tables.
+The API and the chat purge then connect as `clinic_app`; only the one-off migration
+task uses the owner. The password is sent in an `ALTER ROLE` statement, so statement
+logging (`log_statement`) must stay off on that database, which is the RDS default.
+Locally and in CI everything still runs as `clinic_demo`.
+
 ## Chat retention
 
 `python -m scripts.purge_chat --apply` removes stored chat content of every session
