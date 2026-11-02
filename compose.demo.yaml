@@ -1,0 +1,61 @@
+# Disposable full stack in demo mode: db -> one-off migrate+seed -> api -> ui.
+#   make stack-up      (UI on http://127.0.0.1:8501, API on http://127.0.0.1:18000)
+#   make stack-down    (removes containers; the tmpfs database is discarded)
+# Separate from compose.yaml, which is the persistent development database on 15432.
+# The database publishes no port; only the API and UI bind to 127.0.0.1.
+name: clinic-scheduling-demo
+
+x-database-url: &database-url
+  DATABASE_URL: postgresql+psycopg://clinic_demo:${DEMO_DB_PASSWORD:-demo-stack-only}@db:5432/clinic_scheduling_dev
+
+services:
+  db:
+    image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+    pull_policy: missing
+    environment:
+      POSTGRES_USER: clinic_demo
+      POSTGRES_DB: clinic_scheduling_dev
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD:-demo-stack-only}
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic_demo -d clinic_scheduling_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    # One-off task, never part of API start (maps to an ECS run-task later).
+    build: .
+    image: clinic-scheduling-api:local
+    command: ["sh", "-c", "alembic upgrade head && python -m scripts.seed"]
+    environment:
+      <<: *database-url
+      DATABASE_ALLOWED_HOSTS: db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    image: clinic-scheduling-api:local
+    pull_policy: never
+    environment:
+      <<: *database-url
+      AGENT_PROVIDER: demo
+    ports:
+      - "127.0.0.1:18000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  ui:
+    build: ./ui
+    image: clinic-scheduling-ui:local
+    environment:
+      API_BASE_URL: http://api:8000
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
