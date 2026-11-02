@@ -1,0 +1,13 @@
+# Allowlist: the API image needs only what its Dockerfile copies.
+*
+!Dockerfile
+!requirements-runtime.lock
+!alembic.ini
+!alembic/
+!app/
+!scripts/__init__.py
+!scripts/seed.py
+!scripts/purge_chat.py
+**/__pycache__
+**/*.pyc
+**/.env*
