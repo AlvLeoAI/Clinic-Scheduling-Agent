@@ -120,7 +120,8 @@ What the infrastructure step will need from this design:
 - **Exposure.** There is no identity or rate limiting (see
   [security and privacy](docs/SECURITY_PRIVACY.md#known-limitations)); a public demo
   needs at least WAF rate rules, and chat should stay on the `demo` provider.
-- **Logs.** One JSON line per request on stderr; `awslogs` captures stdout and stderr.
+- **Logs.** One JSON line per request on stderr (successful liveness probes are not
+  logged); `awslogs` captures stdout and stderr.
 
 ## Key decisions
 

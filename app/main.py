@@ -25,6 +25,9 @@ from app.db.session import build_engine
 from app.schemas.foundation import ErrorResponse
 
 logger = logging.getLogger("clinic.requests")
+# Container and load-balancer probes call liveness every few seconds; logging each one
+# would bury real traffic. Every other route, readiness included, is still logged.
+UNLOGGED_ROUTES = frozenset({"/api/v1/health/live"})
 logger.setLevel(logging.INFO)
 if not logger.handlers:
     handler = logging.StreamHandler()
@@ -79,23 +82,25 @@ def create_app(
             return error_response(request, 500, "INTERNAL_ERROR", "An internal error occurred.")
         finally:
             route = request.scope.get("route")
-            logger.info(
-                json.dumps(
-                    {
-                        "event": "http_request",
-                        "timestamp": utc_now().isoformat(),
-                        "trace_id": request.state.trace_id,
-                        "response_trace_id": getattr(
-                            request.state, "response_trace_id", request.state.trace_id
-                        ),
-                        "outcome": getattr(request.state, "outcome_code", None),
-                        "method": request.method,
-                        "route": getattr(route, "path", "unmatched"),
-                        "status": status,
-                        "duration_ms": round((perf_counter() - started) * 1000, 2),
-                    }
+            path = getattr(route, "path", "unmatched")
+            if path not in UNLOGGED_ROUTES or status >= 500:
+                logger.info(
+                    json.dumps(
+                        {
+                            "event": "http_request",
+                            "timestamp": utc_now().isoformat(),
+                            "trace_id": request.state.trace_id,
+                            "response_trace_id": getattr(
+                                request.state, "response_trace_id", request.state.trace_id
+                            ),
+                            "outcome": getattr(request.state, "outcome_code", None),
+                            "method": request.method,
+                            "route": path,
+                            "status": status,
+                            "duration_ms": round((perf_counter() - started) * 1000, 2),
+                        }
+                    )
                 )
-            )
 
     @application.exception_handler(ApiError)
     async def domain_error(request, exc):

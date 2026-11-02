@@ -150,6 +150,16 @@ def test_liveness_and_info_need_no_database(client, application):
     assert str(UUID(body["trace_id"])) == info.headers["X-Trace-ID"]
 
 
+def test_liveness_is_not_request_logged_but_keeps_its_trace_header(client, caplog):
+    with caplog.at_level("INFO", logger="clinic.requests"):
+        live = client.get("/api/v1/health/live")
+        client.get("/api/v1/health")
+        client.get("/api/v1/info")
+    assert str(UUID(live.headers["X-Trace-ID"]))
+    routes = [json.loads(r.message)["route"] for r in caplog.records if r.name == "clinic.requests"]
+    assert routes == ["/api/v1/health", "/api/v1/info"]
+
+
 def test_database_outage_sanitized(client, application):
     def unavailable():
         raise OperationalError(

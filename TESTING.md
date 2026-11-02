@@ -179,8 +179,10 @@ docker run --rm --network host -e DATABASE_URL=… clinic-api \
   sh -c "alembic upgrade head && python -m scripts.seed"
 ```
 
-Logs are one JSON line per request on stderr (uvicorn also logs to stderr). Container
-log drivers, including CloudWatch's `awslogs`, capture both stdout and stderr.
+Logs are one JSON line per request on stderr (uvicorn also logs to stderr), except
+successful liveness probes (`/api/v1/health/live`), which would otherwise bury real
+traffic. Container log drivers, including CloudWatch's `awslogs`, capture both stdout
+and stderr.
 
 ## Streamlit UI
 
