@@ -629,7 +629,7 @@ def write_reports(result, directory):
         f"{result['scorer_version']} / `{result['scorer_sha256']}`",
         "Provider: REST adapter + httpx.MockTransport; model synthetic-offline-m5; "
         "timeout 30s; actual token usage unavailable/null.",
-        "AGENT LIVE EVALS: NOT RUN. No live runner is implemented.",
+        "Live evaluations are not part of this offline run; see evaluations.live_runner.",
         "",
         "| Case | Fixture gate | Raw model | Backend | Visible | Rationale / evidence |",
         "| --- | --- | --- | --- | --- | --- |",
@@ -653,7 +653,7 @@ def write_reports(result, directory):
 def main():
     logging.getLogger("clinic.requests").setLevel(logging.WARNING)
     parser = argparse.ArgumentParser(
-        description="Offline synthetic evaluations only; no live runner."
+        description="Offline synthetic evaluations; live smoke runs use evaluations.live_runner."
     )
     parser.add_argument("--output-dir", type=Path, default=ROOT / "docs/evidence")
     parser.add_argument("--evaluation-contract", choices=CONTRACT_VERSIONS, default="1.0")

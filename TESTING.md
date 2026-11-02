@@ -44,6 +44,9 @@ Run the same steps locally, in order:
 
 - `-p tests.r2a_offline_guard` patches `httpx` so any real HTTP request fails the run;
   fakes, `MockTransport` and the in-process `TestClient` still work.
+- The one expected warning is Starlette's deprecation of `httpx` in its `TestClient`
+  (it asks for the separate `httpx2` package). Switching would add a dependency and
+  change what the offline guard patches, so it is deliberately left for later.
 - The evaluation runner defaults to the historical contract 1.0. Select
   `--evaluation-contract 1.2` explicitly for the current application, and always pass
   `--output-dir` so committed evidence is not overwritten.
