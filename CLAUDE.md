@@ -8,6 +8,10 @@ let model text reach the user (replies are rendered from templates in
 
 ## Verify (throwaway database, never a dev DB)
 
+Shortest path: `make db-up ci db-down` (throwaway tmpfs database on 15433, every CI
+step in order). `make serve` also uses that throwaway database; compose.yaml is the
+separate persistent dev database on 15432 and must never be used for tests.
+
 The DB guard (`app/db/safety.py`) only accepts user `clinic_demo` on loopback with
 database `clinic_scheduling_test`/`clinic_scheduling_dev`. The suite rebuilds the
 schema, so use a disposable tmpfs container at the CI-pinned digest on

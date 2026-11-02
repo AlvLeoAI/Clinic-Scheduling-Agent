@@ -77,21 +77,16 @@ reliability estimate, and raw run manifests are not published. Details:
 
 ## Quickstart
 
-Requires Python 3.12 and Docker. No API key is needed.
+Requires Python 3.12, Docker and `make`. No API key is needed.
 
 ```bash
-python3.12 -m venv .venv && .venv/bin/pip install -r requirements-foundation.lock
-docker run -d --rm --name clinic-pg -p 127.0.0.1:15433:5432 \
-  -e POSTGRES_USER=clinic_demo -e POSTGRES_PASSWORD=localdemo \
-  -e POSTGRES_DB=clinic_scheduling_test postgres:16-alpine
-export DATABASE_URL=postgresql+psycopg://clinic_demo:localdemo@127.0.0.1:15433/clinic_scheduling_test
-export TEST_DATABASE_URL=$DATABASE_URL AGENT_PROVIDER=disabled \
-  CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
-  CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
-.venv/bin/pytest -q -p tests.r2a_offline_guard        # full suite, real HTTP blocked
-.venv/bin/python -m cli --synthetic-only --scripted   # migrates, seeds, runs the demo
-docker stop clinic-pg
+make install db-up test demo   # venv, throwaway PostgreSQL, full suite, scripted demo
+make db-down                   # stop and discard the throwaway database
 ```
+
+`make help` lists the other targets, including `make serve` (API with the demo
+provider) and `make ci` (every CI step). Commands without `make` are in
+[testing](TESTING.md#local-database).
 
 The CLI uses a scripted provider with a fixed command grammar (`catalog`,
 `availability ...`, `propose ...`, `confirm <id>`) and a fixed clock of 2030-01-07; it

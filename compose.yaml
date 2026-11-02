@@ -1,8 +1,11 @@
+# Persistent DEVELOPMENT database on 127.0.0.1:15432 (named volume, survives restarts).
+# Tests, demos and `make serve` use the throwaway test database from `make db-up`
+# (tmpfs, 127.0.0.1:15433) instead; see TESTING.md.
 name: clinic-scheduling-agent
 services:
   postgres:
     image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
-    pull_policy: never
+    pull_policy: missing
     environment:
       POSTGRES_USER: clinic_demo
       POSTGRES_DB: clinic_scheduling_dev
