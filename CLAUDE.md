@@ -32,6 +32,9 @@ ledgers into `docs/evidence/`.
 
 ## Rules that are easy to break
 
+- Chat retention: `python -m scripts.purge_chat` (dry run) or `--apply`. It may only
+  delete `conversation_items` and blank `chat_turns.request_hash` to the all-zero
+  sentinel; never delete sessions, turns, proposals, appointments or idempotency rows.
 - `AGENT_PROVIDER` is `disabled` (default), `demo` or `openai`; `ENABLE_LIVE_OPENAI` is a
   deprecated alias for `openai`. Never select `openai` or run live evals without the
   owner's explicit go-ahead per run: they cost money. New providers go in the

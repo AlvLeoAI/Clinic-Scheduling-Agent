@@ -81,6 +81,18 @@ Run the same steps locally, in order:
   `.local/cli_state.json` (mode 0600). After an uncertain confirmation, repeat the same
   `confirm` with the same state to reuse its idempotency key.
 
+## Chat retention
+
+```bash
+.venv/bin/python -m scripts.purge_chat                       # dry run: counts only
+.venv/bin/python -m scripts.purge_chat --apply               # delete
+.venv/bin/python -m scripts.purge_chat --retention-days 7    # override CHAT_RETENTION_DAYS
+```
+
+It uses `DATABASE_URL` and prints a JSON summary. What it deletes and keeps is described
+in [security and privacy](docs/SECURITY_PRIVACY.md#chat-retention);
+`tests/test_chat_retention.py` covers it.
+
 ## Running the server
 
 ```bash
