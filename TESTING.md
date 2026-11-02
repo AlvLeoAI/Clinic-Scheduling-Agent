@@ -173,4 +173,27 @@ docker run --rm --network host -e DATABASE_URL=… clinic-api \
 Logs are one JSON line per request on stderr (uvicorn also logs to stderr). Container
 log drivers, including CloudWatch's `awslogs`, capture both stdout and stderr.
 
+## Streamlit UI
+
+`ui/` is a separate demo client with its own lock (`ui/requirements.lock`, compiled
+from `ui/requirements.in` with the command in its header) and its own image
+(`docker build -t clinic-ui ui`). It reaches the API only through `API_BASE_URL`,
+keeps the session bearer in server-side Streamlit state, and has no database driver.
+
+- The provider comes from `GET /api/v1/info`; no chat turn is spent to discover it.
+- In demo mode, buttons and selectors generate the three grammar commands; the slot
+  list comes from `GET /api/v1/availability`, and the proposal itself from the agent.
+  Free text is offered only when the provider is `openai`.
+- Each proposal is a card with an expiry countdown and a separate **Confirm** button.
+  Its `Idempotency-Key` is created once per proposal and kept in session state, so a
+  rerun or double click resends the same key and books once.
+- `SLOT_TAKEN`, `PROPOSAL_EXPIRED`, `PROPOSAL_SUPERSEDED` and
+  `AGENT_PROVIDER_DISABLED` get specific messages; a retryable 503 offers a retry that
+  reuses the same `client_message_id`.
+
+HTTP logic lives in `ui/client.py` (httpx only); `tests/test_ui_client.py` covers it
+with `httpx.MockTransport` in the main suite, without Streamlit. To run the page
+outside containers, install the UI lock into its own venv and run
+`PYTHONPATH=. API_BASE_URL=http://127.0.0.1:8000 streamlit run ui/app.py`.
+
 Earlier verification receipts per commit are kept in [project history](docs/history/).
