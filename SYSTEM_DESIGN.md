@@ -17,7 +17,8 @@ The architecture diagram is in the [README](README.md#architecture).
 | `app/agent/` | Tool registry and schemas, provider registry (`demo`, `openai`), Responses API adapter, scripted demo provider, context selection, `ReplyPlan` and template renderer. |
 | `app/db/`, `alembic/` | Ten-table schema with ownership, uniqueness and exclusion constraints; synthetic catalog seed. |
 | `evaluations/` | Independent interval oracle and separate raw, backend and visible graders; versioned contracts. |
-| `scripts/` | Guarded demo setup and cleanup, concurrency demo, current-tree secret check, doc checks. |
+| `app/services/retention.py` | Purges stored chat content of sessions expired beyond `CHAT_RETENTION_DAYS`; never touches bookings. |
+| `scripts/` | Guarded demo setup and cleanup, concurrency demo, chat retention purge, current-tree secret check, doc checks. |
 
 ## Scheduling policy
 

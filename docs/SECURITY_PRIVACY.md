@@ -10,8 +10,29 @@ synthetic visit types and UUIDs. The schema has no patient name, phone, email, d
 birth or visit-reason fields. Sessions are anonymous.
 
 Chat messages are stored as sent in `conversation_items` so turns can be replayed and
-recovered. Session expiry stops authentication but does not delete stored
-conversations; there is no retention or purge job.
+recovered. Session expiry stops authentication but does not delete them by itself.
+
+## Chat retention
+
+`python -m scripts.purge_chat --apply` removes stored chat content of every session
+whose bearer expired more than `CHAT_RETENTION_DAYS` (default 30) ago and that holds
+no live lease. Without `--apply` it is a dry run that only reports counts.
+
+- **Deleted:** all `conversation_items` rows of those sessions: user messages, tool
+  calls and results, encrypted reasoning, stored replies and internal markers.
+- **Replaced:** each of their `chat_turns.request_hash` values becomes the sentinel
+  `0000…0000` (64 zeros). The hash is a SHA-256 of the user's message, kept to detect a
+  reused `client_message_id`; a short message could be recovered from it by brute
+  force. The sentinel satisfies the column's hex CHECK constraint and is not the hash
+  of any message.
+- **Kept:** sessions, turns, proposals, appointments and idempotency records, so every
+  foreign key stays valid and no booking is lost. Purged sessions are already past
+  bearer expiry, so no chat or confirmation replay can reach the removed state.
+
+The command locks candidate sessions with `SKIP LOCKED`, so it never races an active
+chat request, and it is idempotent. It is not scheduled yet; a daily cron job, a
+Railway cron service or an EventBridge rule running a scheduled container task with
+`python -m scripts.purge_chat --apply` would each be enough.
 
 ## Authentication and ownership
 

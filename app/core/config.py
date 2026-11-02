@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     provider_timeout_seconds: float = Field(default=30, gt=0, le=120)
     turn_lease_seconds: int = Field(default=90, ge=10, le=600)
     provider_max_output_tokens: int = Field(default=2048, ge=256, le=4096)
+    chat_retention_days: int = Field(default=30, ge=1)
 
     @field_validator("openai_model")
     @classmethod
