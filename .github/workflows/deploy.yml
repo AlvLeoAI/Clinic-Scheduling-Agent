@@ -1,0 +1,154 @@
+name: Deploy to AWS sandbox
+
+# Manual only. Both jobs use the aws-sandbox environment (main only, required
+# reviewer), the only subject the deploy role trusts. Terraform apply and destroy are
+# never run here: infrastructure changes are applied locally by the owner.
+# On the first run, before the app stack is applied, only the images job does work.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-aws-sandbox
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ACCOUNT_ID: '086739225026'
+  REGISTRY: 086739225026.dkr.ecr.us-east-2.amazonaws.com
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  images:
+    name: Build and push arm64 images
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    environment: aws-sandbox
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: deploy-images-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+      - name: Log in to ECR
+        run: aws ecr get-login-password | docker login --username AWS --password-stdin "$REGISTRY"
+      - name: Build and push (tags are immutable; an existing tag is kept)
+        run: |
+          set -euo pipefail
+          push() { # repository context
+            ref="$REGISTRY/$1:$IMAGE_TAG"
+            if aws ecr describe-images --repository-name "$1" --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
+              echo "$ref already exists"; return
+            fi
+            docker build --pull -t "$ref" "$2"
+            test "$(docker image inspect -f '{{.Architecture}}' "$ref")" = arm64
+            test "$(docker image inspect -f '{{.Config.User}}' "$ref")" = 10001
+            docker push "$ref"
+          }
+          push clinic-scheduling-api .
+          push clinic-scheduling-ui ui
+      - name: Log out of ECR
+        if: always()
+        run: docker logout "$REGISTRY"
+
+  release:
+    name: Migrate and update services
+    needs: images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: aws-sandbox
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: deploy-release-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+      - name: Read deploy parameters
+        id: params
+        run: |
+          if ! aws ssm get-parameter --name /clinic-scheduling-agent/deploy \
+            --query Parameter.Value --output text > "$RUNNER_TEMP/deploy.json" 2> "$RUNNER_TEMP/ssm.err"; then
+            cat "$RUNNER_TEMP/ssm.err" >&2
+            grep -q ParameterNotFound "$RUNNER_TEMP/ssm.err" || exit 1
+            echo "::notice::App stack not applied yet: images pushed, nothing released."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq . "$RUNNER_TEMP/deploy.json"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Register task definitions with the new images
+        if: steps.params.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cfg="$RUNNER_TEMP/deploy.json"
+          for key in api ui migrate purge; do
+            family=$(jq -r --arg k "$key" '.families[$k]' "$cfg")
+            repo=$(jq -r 'if $k == "ui" then .repository_ui else .repository_api end' --arg k "$key" "$cfg")
+            aws ecs describe-task-definition --task-definition "$family" --include TAGS > "$RUNNER_TEMP/current.json"
+            jq --arg image "$repo:$IMAGE_TAG" '
+              .taskDefinition
+              | .containerDefinitions |= map(.image = $image)
+              | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities,
+                    .registeredAt, .registeredBy, .deregisteredAt)
+            ' "$RUNNER_TEMP/current.json" > "$RUNNER_TEMP/next.json"
+            tags=$(jq -c '.tags // []' "$RUNNER_TEMP/current.json")
+            if [ "$tags" != "[]" ]; then
+              jq --argjson tags "$tags" '. + {tags: $tags}' "$RUNNER_TEMP/next.json" > "$RUNNER_TEMP/tagged.json"
+              mv "$RUNNER_TEMP/tagged.json" "$RUNNER_TEMP/next.json"
+            fi
+            arn=$(aws ecs register-task-definition --cli-input-json "file://$RUNNER_TEMP/next.json" \
+              --query taskDefinition.taskDefinitionArn --output text)
+            echo "$key -> $arn"
+            echo "TASKDEF_${key^^}=$arn" >> "$GITHUB_ENV"
+          done
+      - name: Run migrations, seed and runtime role (one-off task)
+        if: steps.params.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cfg="$RUNNER_TEMP/deploy.json"
+          cluster=$(jq -r .cluster "$cfg")
+          network=$(jq -c '{awsvpcConfiguration: {subnets: .subnets, securityGroups: [.migrate_sg], assignPublicIp: "ENABLED"}}' "$cfg")
+          task=$(aws ecs run-task --cluster "$cluster" --task-definition "$TASKDEF_MIGRATE" \
+            --launch-type FARGATE --network-configuration "$network" \
+            --propagate-tags TASK_DEFINITION --started-by "github-${GITHUB_RUN_ID}" \
+            --query 'tasks[0].taskArn' --output text)
+          echo "migrate task: $task"
+          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
+          aws ecs describe-tasks --cluster "$cluster" --tasks "$task" \
+            --query 'tasks[0].{stopped: stoppedReason, exit: containers[0].exitCode}' > "$RUNNER_TEMP/migrate.json"
+          aws logs get-log-events --log-group-name "$(jq -r .migrate_logs "$cfg")" \
+            --log-stream-name "migrate/migrate/${task##*/}" --start-from-head \
+            --query 'events[].message' --output text || echo "(no log events)"
+          jq . "$RUNNER_TEMP/migrate.json"
+          test "$(jq -r .exit "$RUNNER_TEMP/migrate.json")" = 0
+      - name: Update services and wait until stable
+        if: steps.params.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cfg="$RUNNER_TEMP/deploy.json"
+          cluster=$(jq -r .cluster "$cfg")
+          api=$(jq -r .services.api "$cfg")
+          ui=$(jq -r .services.ui "$cfg")
+          aws ecs update-service --cluster "$cluster" --service "$api" --task-definition "$TASKDEF_API" >/dev/null
+          aws ecs update-service --cluster "$cluster" --service "$ui" --task-definition "$TASKDEF_UI" >/dev/null
+          aws ecs wait services-stable --cluster "$cluster" --services "$api" "$ui"
+          # A circuit-breaker rollback also ends stable, on the old revision: fail then.
+          for pair in "$api=$TASKDEF_API" "$ui=$TASKDEF_UI"; do
+            running=$(aws ecs describe-services --cluster "$cluster" --services "${pair%%=*}" \
+              --query 'services[0].taskDefinition' --output text)
+            test "$running" = "${pair#*=}" || { echo "${pair%%=*} rolled back to $running" >&2; exit 1; }
+          done
+          echo "Deployed $IMAGE_TAG to $(jq -r .url "$cfg")"
