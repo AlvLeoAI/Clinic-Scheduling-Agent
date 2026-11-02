@@ -28,6 +28,10 @@ It requires the `postgresql+psycopg` driver, user `clinic_demo` and database
   `sslmode=verify-full` with its CA bundle; keys such as `host` or `options` that could
   redirect or alter the connection are refused.
 
+`DATABASE_PASSWORD`, when set, is merged into a password-less `DATABASE_URL` before any
+check, so a secret store can inject the password alone. Setting both a URL password
+and `DATABASE_PASSWORD` is rejected. Neither value appears in settings errors or reprs.
+
 ## Chat retention
 
 `python -m scripts.purge_chat --apply` removes stored chat content of every session
