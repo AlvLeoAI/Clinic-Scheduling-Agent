@@ -99,8 +99,12 @@ checked separately with gitleaks (see the README). Tests block all real HTTP.
   downloaded artifacts.
 - **Privileged SQL bypasses service rules.** Policy and immutability are enforced in
   services and constraints, not by triggers on every field.
-- **Local only.** Loopback examples and local databases do not imply an encrypted or
-  hardened deployment.
+- **Local only.** Loopback examples, local databases and the container stack do not
+  imply an encrypted or hardened deployment. The stack's database password is a fixed
+  demo value (override with `DEMO_DB_PASSWORD`); its database publishes no port.
+- **The UI is a demo client.** It has no login: whoever reaches it gets an anonymous
+  session. It keeps the bearer token in server-side Streamlit state, hides error
+  tracebacks and disables usage statistics.
 - **Live model evidence is smoke-level.** See [evaluation](EVALUATION.md); offline
   counts are not model reliability evidence.
 
