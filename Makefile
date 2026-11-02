@@ -19,7 +19,7 @@ RUN := env DATABASE_URL=$(DB_URL) TEST_DATABASE_URL=$(DB_URL) AGENT_PROVIDER=dis
 	ENABLE_LIVE_OPENAI=false OPENAI_API_KEY= OPENAI_MODEL= \
 	CLINIC_BOOKING_EVIDENCE_FILE=M6_booking_regression_cases.json \
 	CLINIC_AGENT_EVIDENCE_FILE=M6_m4_regression_cases.json
-LINT_PATHS := app cli scripts alembic tests evaluations
+LINT_PATHS := app cli scripts alembic tests evaluations ui
 
 .PHONY: help install db-up db-down test demo lint ci serve purge-chat
 
