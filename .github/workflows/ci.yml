@@ -47,8 +47,8 @@ jobs:
         run: .venv/bin/python -m scripts.check_synthetic
       - name: Ruff
         run: |
-          .venv/bin/ruff check app cli scripts alembic tests evaluations
-          .venv/bin/ruff format --check app cli scripts alembic tests evaluations
+          .venv/bin/ruff check app cli scripts alembic tests evaluations ui
+          .venv/bin/ruff format --check app cli scripts alembic tests evaluations ui
       - name: PostgreSQL migrations and parity
         run: |
           .venv/bin/alembic upgrade head

@@ -63,8 +63,8 @@ Run the same steps locally, in order:
 
 ```bash
 .venv/bin/python -m scripts.check_synthetic                     # current-tree secrets and fixtures
-.venv/bin/ruff check app cli scripts alembic tests evaluations
-.venv/bin/ruff format --check app cli scripts alembic tests evaluations
+.venv/bin/ruff check app cli scripts alembic tests evaluations ui
+.venv/bin/ruff format --check app cli scripts alembic tests evaluations ui
 .venv/bin/alembic upgrade head && .venv/bin/alembic check       # migrations match models
 .venv/bin/pytest -q -p tests.r2a_offline_guard                  # full suite
 .venv/bin/python -m evaluations.runner --evaluation-contract 1.2 --output-dir test-results/evals
