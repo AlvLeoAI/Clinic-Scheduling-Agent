@@ -108,7 +108,7 @@ def test_provider_transport_is_mocked_and_uses_configured_timeout_model():
         )
 
     config = settings(
-        enable_live_openai=True,
+        agent_provider="openai",
         openai_model="synthetic-test-model",
         openai_api_key="synthetic-test-credential",
         provider_timeout_seconds=12,
@@ -133,7 +133,7 @@ def test_provider_error_details_and_credentials_are_sanitized():
         return httpx.Response(500, json={"error": "synthetic-private-marker"})
 
     config = settings(
-        enable_live_openai=True,
+        agent_provider="openai",
         openai_model="synthetic-test-model",
         openai_api_key="synthetic-test-credential",
     )

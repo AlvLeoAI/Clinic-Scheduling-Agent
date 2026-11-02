@@ -1,8 +1,12 @@
-"""Foundation needs no vendor credentials; live agent access is explicitly disabled by default."""
+"""Runtime settings; no vendor credentials are needed and chat is disabled by default."""
+
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
+
+AgentProvider = Literal["disabled", "demo", "openai"]
 
 
 class Settings(BaseSettings):
@@ -10,6 +14,8 @@ class Settings(BaseSettings):
     database_url: SecretStr
     test_database_url: SecretStr | None = None
     session_ttl_hours: int = Field(default=24, gt=0)
+    agent_provider: AgentProvider | None = None
+    # Deprecated alias: true selects "openai" when AGENT_PROVIDER is unset.
     enable_live_openai: bool = False
     openai_api_key: SecretStr | None = None
     openai_model: str | None = None
@@ -21,6 +27,30 @@ class Settings(BaseSettings):
     @classmethod
     def optional_model(cls, value):
         return value.strip() or None if value is not None else None
+
+    @field_validator("agent_provider", mode="before")
+    @classmethod
+    def optional_provider(cls, value):
+        return value.strip().lower() or None if isinstance(value, str) else value
+
+    @property
+    def effective_agent_provider(self) -> AgentProvider:
+        # A property, not a validator: evaluation runners switch providers via model_copy.
+        if self.agent_provider is not None:
+            return self.agent_provider
+        return "openai" if self.enable_live_openai else "disabled"
+
+    @model_validator(mode="after")
+    def provider_is_consistent(self):
+        if self.agent_provider not in (None, "openai") and self.enable_live_openai:
+            raise ValueError("ENABLE_LIVE_OPENAI conflicts with the selected AGENT_PROVIDER.")
+        if self.agent_provider == "openai" and (
+            self.openai_api_key is None
+            or not self.openai_api_key.get_secret_value()
+            or not self.openai_model
+        ):
+            raise ValueError("AGENT_PROVIDER=openai requires OPENAI_API_KEY and OPENAI_MODEL.")
+        return self
 
     @model_validator(mode="after")
     def lease_covers_timeout(self):

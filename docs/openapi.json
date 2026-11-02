@@ -881,7 +881,19 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "X-Agent-Provider": {
+                "description": "Agent provider configured when this response was served.",
+                "schema": {
+                  "enum": [
+                    "demo",
+                    "openai"
+                  ],
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -939,7 +951,19 @@
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "Service Unavailable",
+            "headers": {
+              "X-Agent-Provider": {
+                "description": "Agent provider configured when this response was served.",
+                "schema": {
+                  "enum": [
+                    "demo",
+                    "openai"
+                  ],
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "security": [

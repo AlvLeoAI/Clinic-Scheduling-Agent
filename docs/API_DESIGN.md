@@ -56,6 +56,9 @@ after fetching the appointment.
 
 ## Chat semantics
 
+- The server's chat provider comes from `AGENT_PROVIDER`. Every chat response carries
+  `X-Agent-Provider` (`demo` or `openai`) naming the provider configured when it was
+  served; a replayed turn reports the current configuration, not the original one.
 - Retrying a completed message replays its turn, message and trace, but refreshes the
   attached proposal's status, so the JSON can differ from the first response.
 - A second request while a turn is in progress returns 409 `TURN_IN_PROGRESS`.
