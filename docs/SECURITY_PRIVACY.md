@@ -47,7 +47,7 @@ Locally and in CI everything still runs as `clinic_demo`.
 
 ## Chat retention
 
-`python -m scripts.purge_chat --apply` removes stored chat content of every session
+`python -m scripts.purge_chat --apply` removes the stored chat text of every session
 whose bearer expired more than `CHAT_RETENTION_DAYS` (default 30) ago and that holds
 no live lease. Without `--apply` it is a dry run that only reports counts.
 
@@ -58,9 +58,15 @@ no live lease. Without `--apply` it is a dry run that only reports counts.
   reused `client_message_id`; a short message could be recovered from it by brute
   force. The sentinel satisfies the column's hex CHECK constraint and is not the hash
   of any message.
-- **Kept:** sessions, turns, proposals, appointments and idempotency records, so every
-  foreign key stays valid and no booking is lost. Purged sessions are already past
-  bearer expiry, so no chat or confirmation replay can reach the removed state.
+- **Cleared:** each of their `chat_turns.assistant_message` values becomes NULL. It is
+  the stored reply that a completed turn replays, and it can quote the user's request.
+  Sessions purged before this column was cleared are still eligible, so the next run
+  clears their replies too.
+- **Kept:** the session rows; each turn's row with its id, `client_message_id`,
+  status, timestamps and trace ID; proposals, appointments and idempotency records
+  (whose stored confirm responses hold booking details but no chat text). Every foreign
+  key stays valid and no booking is lost. Purged sessions are already past bearer
+  expiry, so no chat or confirmation replay can reach the removed state.
 
 The command locks candidate sessions with `SKIP LOCKED`, so it never races an active
 chat request, and it is idempotent. The AWS sandbox runs it daily as an EventBridge

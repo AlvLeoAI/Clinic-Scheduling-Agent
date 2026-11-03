@@ -1,4 +1,7 @@
-"""Purge stored chat text of sessions expired beyond CHAT_RETENTION_DAYS; dry run by default."""
+"""Purge stored chat text (items, hashes, replies) of sessions expired beyond retention.
+
+Dry run by default; --apply writes. CHAT_RETENTION_DAYS sets the retention period.
+"""
 
 import argparse
 import json

@@ -80,6 +80,12 @@ class Retention:
                         select(ChatTurn.request_hash).where(ChatTurn.session_id == session_id)
                     )
                 ),
+                "replies": sorted(
+                    repr(m)
+                    for m in db.scalars(
+                        select(ChatTurn.assistant_message).where(ChatTurn.session_id == session_id)
+                    )
+                ),
                 "turn_ids": sorted(
                     str(i)
                     for i in db.scalars(
@@ -175,17 +181,40 @@ def test_purge_removes_only_chat_text_of_sessions_expired_beyond_retention(reten
     purged = after[booked]
     assert purged["items"] == 0
     assert set(purged["hashes"]) == {PURGED_REQUEST_HASH}
+    assert before[booked]["replies"] and set(purged["replies"]) == {"None"}
+    assert applied.assistant_messages == len(before[booked]["replies"])
     for kept in ["session", "turn_ids", "proposals", "appointments", "idempotency"]:
         assert purged[kept] == before[booked][kept], kept
     for untouched in [active, in_window, leased]:
         assert after[untouched] == before[untouched]
 
     rerun = retention.purge(apply=True)
-    assert (rerun.conversation_items, rerun.turn_hashes) == (0, 0)
+    assert (rerun.conversation_items, rerun.turn_hashes, rerun.assistant_messages) == (0, 0, 0)
 
     # A session that was not purged still replays its completed turn byte-for-byte.
     replay = retention.chat(active_auth, "catalog", message_id)
     assert replay.json() == first.json()
+
+
+def test_purge_clears_replies_left_by_an_earlier_purge(retention):
+    # An earlier version blanked only the hash: the stored reply must still go.
+    owner, auth = retention.session()
+    retention.chat(auth, "catalog")
+    retention.expire(owner, days_ago=31)
+    with Session(retention.engine) as db, db.begin():
+        db.execute(delete(ConversationItem).where(ConversationItem.session_id == owner))
+        db.execute(
+            update(ChatTurn)
+            .where(ChatTurn.session_id == owner)
+            .values(request_hash=PURGED_REQUEST_HASH)
+        )
+    assert retention.snapshot(owner)["replies"] != ["None"]
+
+    dry = retention.purge(apply=False)
+    assert (dry.turn_hashes, dry.assistant_messages) == (0, 1)
+    assert retention.snapshot(owner)["replies"] != ["None"]
+    retention.purge(apply=True)
+    assert retention.snapshot(owner)["replies"] == ["None"]
 
 
 def test_purge_command_defaults_to_dry_run(retention, monkeypatch, capsys):

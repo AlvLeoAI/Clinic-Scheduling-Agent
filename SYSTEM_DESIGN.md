@@ -17,7 +17,7 @@ The architecture diagram is in the [README](README.md#architecture).
 | `app/agent/` | Tool registry and schemas, provider registry (`demo`, `openai`), Responses API adapter, scripted demo provider, context selection, `ReplyPlan` and template renderer. |
 | `app/db/`, `alembic/` | Ten-table schema with ownership, uniqueness and exclusion constraints; synthetic catalog seed. |
 | `evaluations/` | Independent interval oracle and separate raw, backend and visible graders; versioned contracts. |
-| `app/services/retention.py` | Purges stored chat content of sessions expired beyond `CHAT_RETENTION_DAYS`; never touches bookings. |
+| `app/services/retention.py` | Purges stored chat text (conversation items, request hashes, stored replies) of sessions expired beyond `CHAT_RETENTION_DAYS`; never touches bookings. |
 | `scripts/` | Guarded demo setup and cleanup, runtime database role, concurrency demo, chat retention purge, current-tree secret check, doc checks. |
 | `ui/` | Streamlit demo client. Reads and proposes through the API; books only through the confirm endpoint with one idempotency key per proposal. No database access. |
 | `Dockerfile`, `ui/Dockerfile`, `compose.demo.yaml` | Pinned non-root API and UI images, and a one-command local stack with a one-off migrate+seed step. |
