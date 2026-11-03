@@ -280,7 +280,10 @@ tflint --recursive --chdir infra/terraform --config "$PWD/infra/terraform/.tflin
 ```
 
 Every checkov skip is an inline `#checkov:skip=ID:reason` next to the resource it
-covers. A plan needs SSO credentials and only reads the account:
+covers. The deploy workflow's step order (the purge revision is registered only after
+a healthy release) and `infra/tools/register_task_definition.sh` are covered in the
+main suite by `tests/test_deploy_workflow.py`, which runs the helper against a fake
+`aws` on `PATH` (it needs `jq`). A plan needs SSO credentials and only reads the account:
 
 ```bash
 export AWS_PROFILE=clinic-sandbox   # after: aws sso login --profile clinic-sandbox

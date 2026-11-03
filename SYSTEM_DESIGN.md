@@ -146,7 +146,8 @@ browser --HTTPS--> CloudFront (*.cloudfront.net, HSTS) --VPC origin--> internal 
 - **Deploys.** `.github/workflows/deploy.yml` (manual) builds arm64 images on a native
   runner, pushes them tagged with the commit SHA, registers new task-definition
   revisions, runs the migrate task and stops on a non-zero exit, then updates both
-  services and fails if a circuit-breaker rollback left the old revision running.
+  services and fails if a circuit-breaker rollback left the old revision running. The
+  purge revision is registered last (see "Release order").
   Terraform creates the first revision of each family and ignores later ones on the
   services; the purge schedule names the family without a revision, so it runs the
   latest. `terraform apply` and `destroy` are never run from CI.
@@ -193,6 +194,24 @@ printed by `aws ecs describe-task-definition --task-definition clinic-api --quer
 'taskDefinition.containerDefinitions[0].image'`.
 To rotate the `clinic_app` password, increase `app_password_version`, apply, then run
 the deploy workflow.
+
+### Release order
+
+The release job of the deploy workflow runs these steps, and each one runs only if
+every earlier step succeeded:
+
+1. Register new revisions of `clinic-api`, `clinic-ui` and `clinic-migrate` with the
+   release image (`infra/tools/register_task_definition.sh`).
+2. Run the migrate task; fail on a non-zero exit.
+3. Update both services, wait until they are stable, and fail if a circuit-breaker
+   rollback left either on its old revision.
+4. Register the new `clinic-purge` revision.
+
+The purge schedule names its family without a revision, so it always runs the latest
+one. Registering it last means a release that fails at any earlier step leaves the
+schedule on the previous release's code. The deploy role therefore needs no Scheduler
+permissions. A failed release can leave unused `clinic-api`, `clinic-ui` or
+`clinic-migrate` revisions behind; they are free and are replaced by the next release.
 
 ### Cost (us-east-2, on-demand, running all month)
 
