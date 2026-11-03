@@ -106,7 +106,9 @@ Remaining network exposure, by design:
   CloudFront's service-managed VPC-origin security group instead would limit it to
   this account's distributions, but that group exists only after the first apply.
 - The deploy role can be assumed only by workflow jobs in the `aws-sandbox` GitHub
-  environment (main branch, required reviewer). It can push images, register task
+  environment (main branch, required reviewer). Its trust policy matches GitHub's
+  immutable OIDC subject, which includes the owner and repository IDs, so a renamed
+  or re-created repository with the same name cannot assume it. It can push images, register task
   definitions (an action AWS does not scope by resource), run the migrate task and
   update the two services. In effect, it can deploy any code under this stack's
   execution roles, so the reviewer approval is the control. It cannot change IAM, read

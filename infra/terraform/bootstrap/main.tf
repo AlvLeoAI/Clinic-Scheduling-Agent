@@ -3,7 +3,10 @@ data "aws_caller_identity" "current" {}
 locals {
   account_id = data.aws_caller_identity.current.account_id
   region     = "us-east-2"
-  repository = "AlvLeoAI/Clinic-Scheduling-Agent"
+  # The repository uses GitHub's immutable OIDC subject, which carries the owner and
+  # repository IDs (`gh api repos/AlvLeoAI/Clinic-Scheduling-Agent --jq '.owner.id, .id'`),
+  # so a renamed or re-created repository with the same name cannot assume the role.
+  oidc_subject_repo = "AlvLeoAI@79704858/Clinic-Scheduling-Agent@1422471686"
 
   # Names shared with infra/terraform/app; the deploy role is scoped to them.
   cluster         = "clinic-scheduling-agent"
@@ -181,7 +184,7 @@ data "aws_iam_policy_document" "deploy_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${local.repository}:environment:aws-sandbox"]
+      values   = ["repo:${local.oidc_subject_repo}:environment:aws-sandbox"]
     }
   }
 }
