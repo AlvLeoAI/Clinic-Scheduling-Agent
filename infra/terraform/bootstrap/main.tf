@@ -23,7 +23,7 @@ locals {
 resource "aws_s3_bucket" "state" {
   #checkov:skip=CKV_AWS_144:Single-region sandbox; versioning protects state, replication is not worth its cost.
   #checkov:skip=CKV_AWS_145:SSE-S3 is enough for state that holds no secrets (passwords are write-only or RDS-managed).
-  #checkov:skip=CKV_AWS_18:Access logging would need a second bucket; CloudTrail covers API access.
+  #checkov:skip=CKV_AWS_18:No server access logging, to avoid a second bucket in a single-operator sandbox; the deploy role has no state access, so only the SSO admin role reads it (by IAM grants, not the bucket policy). CloudTrail management events cover configuration changes, not object reads: enable S3 data events or server access logs before any shared or long-running use.
   #checkov:skip=CKV2_AWS_62:No consumer for event notifications.
   bucket = "clinic-scheduling-agent-tfstate-${local.account_id}"
 
