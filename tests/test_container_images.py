@@ -61,3 +61,17 @@ def test_ui_image_keeps_websockets_alive_behind_a_proxy():
     text = (ROOT / "ui/Dockerfile").read_text()
     ping = re.search(r"STREAMLIT_SERVER_WEBSOCKET_PING_INTERVAL=(\d+)", text)
     assert ping and 0 < int(ping.group(1)) < 300
+
+
+def test_ui_image_copies_every_ui_module_the_page_imports():
+    copied = re.search(r"^COPY (.+) \./ui/$", (ROOT / "ui/Dockerfile").read_text(), re.M)
+    allowed = (ROOT / "ui/.dockerignore").read_text().split()
+    imported = {
+        f"{name}.py"
+        for path in (ROOT / "ui").glob("*.py")
+        for name in re.findall(r"^from ui\.(\w+) import", path.read_text(), re.M)
+    }
+    assert copied and imported
+    for module in imported | {"app.py"}:
+        assert module in copied.group(1).split(), module
+        assert f"!{module}" in allowed, module

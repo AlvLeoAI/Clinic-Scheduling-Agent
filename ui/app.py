@@ -11,7 +11,9 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
-from ui.client import ApiError, ClinicApi, Proposal, confirmation_key
+from ui.client import ApiError, ClinicApi, Proposal
+from ui.confirmation import ConfirmState, action, flow_for
+from ui.confirmation import confirm as confirm_proposal
 
 st.set_page_config(page_title="Clinic Scheduling Agent", page_icon="🗓️", layout="centered")
 state = st.session_state
@@ -31,10 +33,10 @@ def show_error(error: ApiError) -> None:
 def session_token() -> str:
     if "token" not in state:
         # A new session owns nothing yet: drop the previous session's proposal and keys.
-        for stale in ("proposal", "appointment", "slots", "pending"):
+        for stale in ("proposal", "slots", "pending"):
             state.pop(stale, None)
         state.token = api().create_session().token
-        state.confirm_keys, state.log = {}, []
+        state.confirm_keys, state.flows, state.log = {}, {}, []
     return state.token
 
 
@@ -54,15 +56,19 @@ def send(message: str, message_id: UUID | None = None) -> None:
     state.pop("pending", None)
     state.log.append(("assistant", reply.assistant_message))
     if reply.proposal is not None:
-        state.proposal, state.appointment = reply.proposal, None
+        state.proposal = reply.proposal
 
 
 def confirm(proposal: Proposal) -> None:
-    key = confirmation_key(state.confirm_keys, proposal.proposal_id)
+    # Confirm and "Check booking status" both resend the proposal's one Idempotency-Key.
     try:
-        state.appointment = api().confirm(session_token(), proposal.proposal_id, key)
+        token = session_token()
     except ApiError as error:
         state.error = error
+        return
+    flow = confirm_proposal(api(), token, proposal, state.flows, state.confirm_keys)
+    if flow.state is ConfirmState.FAILED:
+        state.error = flow.error
 
 
 def local(moment: datetime, zone: ZoneInfo) -> str:
@@ -79,8 +85,7 @@ def countdown(proposal: Proposal) -> None:
 
 
 def proposal_card(proposal: Proposal, names: dict[UUID, str], zone: ZoneInfo) -> None:
-    appointment = state.get("appointment")
-    booked = appointment is not None and appointment.proposal_id == proposal.proposal_id
+    flow = flow_for(state.flows, proposal.proposal_id)
     with st.container(border=True):
         st.markdown("**Proposed appointment** (not booked until you confirm)")
         st.write(
@@ -91,18 +96,27 @@ def proposal_card(proposal: Proposal, names: dict[UUID, str], zone: ZoneInfo) ->
             f"{local(proposal.starts_at, zone)} – "
             f"{proposal.ends_at.astimezone(zone):%H:%M} ({zone.key})"
         )
-        if booked:
+        if flow.state is ConfirmState.CONFIRMED:
+            appointment = flow.appointment
             note = " (it was already confirmed)" if appointment.already_confirmed else ""
             st.success(f"Booked{note}. Appointment {appointment.appointment_id}")
             return
-        countdown(proposal)
-        st.button(
-            "Confirm booking",
-            type="primary",
-            on_click=confirm,
-            args=(proposal,),
-            disabled=proposal.seconds_left(datetime.now(UTC)) == 0,
-        )
+        if flow.state is ConfirmState.UNCERTAIN:
+            st.warning(
+                "The booking outcome is unknown: the request may have reached the clinic. "
+                "Check its status; this cannot book twice."
+            )
+        elif flow.state is ConfirmState.PENDING:
+            countdown(proposal)
+        next_step = action(proposal, flow, datetime.now(UTC))
+        if next_step is not None:
+            st.button(
+                next_step.label,
+                type="primary",
+                on_click=confirm,
+                args=(proposal,),
+                disabled=not next_step.enabled,
+            )
 
 
 def demo_controls(catalog, info) -> None:
