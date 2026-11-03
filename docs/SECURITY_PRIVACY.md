@@ -105,7 +105,9 @@ Remaining network exposure, by design:
   this.
 - Traffic inside the VPC is plain HTTP: CloudFront's VPC-origin interfaces to the
   internal ALB, the ALB to the UI, and the UI to the API, which carries the session
-  bearer. TLS covers browser to CloudFront and the API to the database
+  bearer. The post-deploy smoke task also calls the API over HTTP with its own
+  short-lived session; its security group allows only the API on 8000 and HTTPS out,
+  and it holds no database credentials. TLS covers browser to CloudFront and the API to the database
   (`verify-full`, with `rds.force_ssl` on).
 - The ALB accepts HTTP only from the CloudFront origin-facing managed prefix list. It
   is internal, so only CloudFront VPC origins in this VPC can reach it. Admitting
@@ -115,8 +117,8 @@ Remaining network exposure, by design:
   environment (main branch, required reviewer). Its trust policy matches GitHub's
   immutable OIDC subject, which includes the owner and repository IDs, so a renamed
   or re-created repository with the same name cannot assume it. It can push images, register task
-  definitions (an action AWS does not scope by resource), run the migrate task and
-  update the two services. In effect, it can deploy any code under this stack's
+  definitions (an action AWS does not scope by resource), run the migrate and smoke
+  tasks, read their logs and update the two services. In effect, it can deploy any code under this stack's
   execution roles, so the reviewer approval is the control. It cannot change IAM, read
   Terraform state, reach the database or change the purge schedule. The schedule runs
   the purge family's latest revision, which the workflow registers only after a release

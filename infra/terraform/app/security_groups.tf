@@ -27,6 +27,13 @@ resource "aws_security_group" "jobs" {
   vpc_id      = aws_vpc.main.id
 }
 
+resource "aws_security_group" "smoke" {
+  #checkov:skip=CKV2_AWS_5:Attached at run time by the deploy workflow's run-task.
+  name        = "${local.name}-smoke"
+  description = "Post-deploy smoke task: no inbound; to the API and HTTPS"
+  vpc_id      = aws_vpc.main.id
+}
+
 resource "aws_security_group" "db" {
   name        = "${local.name}-db"
   description = "RDS: PostgreSQL from the API and jobs; no egress"
@@ -81,20 +88,39 @@ resource "aws_vpc_security_group_egress_rule" "ui_to_api" {
 
 resource "aws_vpc_security_group_ingress_rule" "api_from_ui" {
   security_group_id            = aws_security_group.api.id
-  description                  = "API from UI tasks only"
+  description                  = "API from UI tasks"
   ip_protocol                  = "tcp"
   from_port                    = 8000
   to_port                      = 8000
   referenced_security_group_id = aws_security_group.ui.id
 }
 
+resource "aws_vpc_security_group_egress_rule" "smoke_to_api" {
+  security_group_id            = aws_security_group.smoke.id
+  description                  = "API over Cloud Map DNS"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.api.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "api_from_smoke" {
+  security_group_id            = aws_security_group.api.id
+  description                  = "API from the post-deploy smoke task"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.smoke.id
+}
+
 # HTTPS out: ECR, Secrets Manager and CloudWatch Logs public endpoints (no NAT or
 # interface endpoints in this design).
 resource "aws_vpc_security_group_egress_rule" "https" {
   for_each = {
-    ui   = aws_security_group.ui.id
-    api  = aws_security_group.api.id
-    jobs = aws_security_group.jobs.id
+    ui    = aws_security_group.ui.id
+    api   = aws_security_group.api.id
+    jobs  = aws_security_group.jobs.id
+    smoke = aws_security_group.smoke.id
   }
   security_group_id = each.value
   description       = "HTTPS to AWS public endpoints"

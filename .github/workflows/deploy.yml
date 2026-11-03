@@ -93,7 +93,7 @@ jobs:
           jq . "$RUNNER_TEMP/deploy.json"
           echo "ready=true" >> "$GITHUB_OUTPUT"
       # purge is registered last: the schedule runs the family's latest revision, so it
-      # must never point at code from a release that failed after this step.
+      # must never point at code from a release that failed a later step.
       - name: Register the release's task definitions (not purge)
         if: steps.params.outputs.ready == 'true'
         run: |
@@ -111,21 +111,8 @@ jobs:
         run: |
           set -euo pipefail
           cfg="$RUNNER_TEMP/deploy.json"
-          cluster=$(jq -r .cluster "$cfg")
-          network=$(jq -c '{awsvpcConfiguration: {subnets: .subnets, securityGroups: [.migrate_sg], assignPublicIp: "ENABLED"}}' "$cfg")
-          task=$(aws ecs run-task --cluster "$cluster" --task-definition "$TASKDEF_MIGRATE" \
-            --launch-type FARGATE --network-configuration "$network" \
-            --propagate-tags TASK_DEFINITION --started-by "github-${GITHUB_RUN_ID}" \
-            --query 'tasks[0].taskArn' --output text)
-          echo "migrate task: $task"
-          aws ecs wait tasks-stopped --cluster "$cluster" --tasks "$task"
-          aws ecs describe-tasks --cluster "$cluster" --tasks "$task" \
-            --query 'tasks[0].{stopped: stoppedReason, exit: containers[0].exitCode}' > "$RUNNER_TEMP/migrate.json"
-          aws logs get-log-events --log-group-name "$(jq -r .migrate_logs "$cfg")" \
-            --log-stream-name "migrate/migrate/${task##*/}" --start-from-head \
-            --query 'events[].message' --output text || echo "(no log events)"
-          jq . "$RUNNER_TEMP/migrate.json"
-          test "$(jq -r .exit "$RUNNER_TEMP/migrate.json")" = 0
+          infra/tools/run_one_off_task.sh "$cfg" "$TASKDEF_MIGRATE" \
+            "$(jq -r .migrate_sg "$cfg")" "$(jq -r .migrate_logs "$cfg")" migrate
       - name: Update services and wait until stable
         if: steps.params.outputs.ready == 'true'
         run: |
@@ -144,7 +131,19 @@ jobs:
             test "$running" = "${pair#*=}" || { echo "${pair%%=*} rolled back to $running" >&2; exit 1; }
           done
           echo "Deployed $IMAGE_TAG to $(jq -r .url "$cfg")"
-      - name: Register the purge revision (only after a healthy release)
+      # Inside the VPC, through Cloud Map: readiness, then one booking confirmed twice
+      # with the same Idempotency-Key. Each run leaves one synthetic appointment.
+      - name: Post-deploy smoke (one-off task)
+        if: steps.params.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cfg="$RUNNER_TEMP/deploy.json"
+          arn=$(infra/tools/register_task_definition.sh "$(jq -r .families.smoke "$cfg")" \
+            "$(jq -r .repository_api "$cfg"):$IMAGE_TAG")
+          echo "smoke -> $arn"
+          infra/tools/run_one_off_task.sh "$cfg" "$arn" \
+            "$(jq -r .smoke_sg "$cfg")" "$(jq -r .smoke_logs "$cfg")" smoke
+      - name: Register the purge revision (only after a healthy, smoked release)
         if: steps.params.outputs.ready == 'true'
         run: |
           set -euo pipefail

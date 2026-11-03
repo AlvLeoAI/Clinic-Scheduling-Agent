@@ -115,6 +115,8 @@ resource "aws_ssm_parameter" "deploy" {
     subnets        = aws_subnet.public[*].id
     migrate_sg     = aws_security_group.jobs.id
     migrate_logs   = aws_cloudwatch_log_group.task["migrate"].name
+    smoke_sg       = aws_security_group.smoke.id
+    smoke_logs     = aws_cloudwatch_log_group.task["smoke"].name
     repository_api = "${local.registry}/clinic-scheduling-api"
     repository_ui  = "${local.registry}/clinic-scheduling-ui"
     url            = "https://${aws_cloudfront_distribution.ui.domain_name}"

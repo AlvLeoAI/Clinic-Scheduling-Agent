@@ -11,10 +11,10 @@ locals {
   # Names shared with infra/terraform/app; the deploy role is scoped to them.
   cluster         = "clinic-scheduling-agent"
   services        = ["clinic-api", "clinic-ui"]
-  migrate_family  = "clinic-migrate"
+  one_off_tasks   = ["clinic-migrate", "clinic-smoke"] # run by the deploy workflow
   ecs_role_path   = "/clinic-scheduling-agent/ecs/"
   deploy_param    = "/clinic-scheduling-agent/deploy"
-  migrate_logs    = "/clinic-scheduling-agent/migrate"
+  one_off_logs    = ["/clinic-scheduling-agent/migrate", "/clinic-scheduling-agent/smoke"]
   image_repos     = ["clinic-scheduling-api", "clinic-scheduling-ui"]
   ecs_arn_prefix  = "arn:aws:ecs:${local.region}:${local.account_id}"
   logs_arn_prefix = "arn:aws:logs:${local.region}:${local.account_id}"
@@ -246,9 +246,9 @@ data "aws_iam_policy_document" "deploy" {
   }
 
   statement {
-    sid       = "RunMigrations"
+    sid       = "RunOneOffTasks"
     actions   = ["ecs:RunTask"]
-    resources = ["${local.ecs_arn_prefix}:task-definition/${local.migrate_family}:*"]
+    resources = [for family in local.one_off_tasks : "${local.ecs_arn_prefix}:task-definition/${family}:*"]
     condition {
       test     = "ArnEquals"
       variable = "ecs:cluster"
@@ -257,15 +257,15 @@ data "aws_iam_policy_document" "deploy" {
   }
 
   statement {
-    sid       = "WatchMigrations"
+    sid       = "WatchOneOffTasks"
     actions   = ["ecs:DescribeTasks"]
     resources = ["${local.ecs_arn_prefix}:task/${local.cluster}/*"]
   }
 
   statement {
-    sid       = "MigrationLogs"
+    sid       = "OneOffTaskLogs"
     actions   = ["logs:GetLogEvents"]
-    resources = ["${local.logs_arn_prefix}:log-group:${local.migrate_logs}:log-stream:*"]
+    resources = [for group in local.one_off_logs : "${local.logs_arn_prefix}:log-group:${group}:log-stream:*"]
   }
 
   statement {

@@ -9,6 +9,7 @@
 !scripts/seed.py
 !scripts/purge_chat.py
 !scripts/db_roles.py
+!scripts/smoke_deploy.py
 **/__pycache__
 **/*.pyc
 **/.env*
