@@ -90,8 +90,9 @@ stack-up: ## Build and start db, migrate+seed, API (127.0.0.1:18000) and UI (127
 	$(STACK) up -d --build --wait
 	@echo "UI: http://127.0.0.1:8501   API: http://127.0.0.1:18000/docs   (demo provider)"
 
-stack-smoke: ## Smoke-test the running stack: health, info, one demo catalog turn, UI health
+stack-smoke: ## Smoke-test the running stack: health, catalog turn, UI health, one booking
 	python3 scripts/smoke_stack.py
+	python3 scripts/smoke_deploy.py --api http://127.0.0.1:18000
 
 stack-down: ## Stop the stack and discard its database
 	$(STACK) down --volumes --remove-orphans

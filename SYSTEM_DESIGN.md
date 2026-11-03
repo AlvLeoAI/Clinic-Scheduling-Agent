@@ -120,9 +120,10 @@ browser --HTTPS--> CloudFront (*.cloudfront.net, HSTS) --VPC origin--> internal 
   provider and the deploy role. `infra/terraform/app` holds everything else.
 - **Network.** Tasks run in public subnets with a public IP so they can reach ECR,
   Secrets Manager and CloudWatch Logs without a NAT gateway. Security groups admit no
-  inbound traffic except ALB to UI (8501) and UI to API (8000). Egress is limited to
-  HTTPS for the UI, API and one-off tasks, plus PostgreSQL to the database for the API
-  and one-off tasks. RDS and the internal ALB sit in private subnets with no route out
+  inbound traffic except ALB to UI (8501), and UI or the post-deploy smoke task to API
+  (8000). Egress is limited to HTTPS for the UI, API and one-off tasks, plus PostgreSQL
+  to the database for the API, migrate and purge tasks; the smoke task has no database
+  access. RDS and the internal ALB sit in private subnets with no route out
   of the VPC; RDS has no egress rules. See
   [security and privacy](docs/SECURITY_PRIVACY.md#aws-sandbox-exposure).
 - **HTTPS.** CloudFront is the only public endpoint: viewer HTTP is redirected to
@@ -145,9 +146,10 @@ browser --HTTPS--> CloudFront (*.cloudfront.net, HSTS) --VPC origin--> internal 
   roles: the containers call no AWS API.
 - **Deploys.** `.github/workflows/deploy.yml` (manual) builds arm64 images on a native
   runner, pushes them tagged with the commit SHA, registers new task-definition
-  revisions, runs the migrate task and stops on a non-zero exit, then updates both
-  services and fails if a circuit-breaker rollback left the old revision running. The
-  purge revision is registered last (see "Release order").
+  revisions, runs the migrate task and stops on a non-zero exit, updates both services
+  and fails if a circuit-breaker rollback left the old revision running, then runs a
+  booking smoke inside the VPC. The purge revision is registered last (see "Release
+  order").
   Terraform creates the first revision of each family and ignores later ones on the
   services; the purge schedule names the family without a revision, so it runs the
   latest. `terraform apply` and `destroy` are never run from CI.
@@ -202,16 +204,31 @@ every earlier step succeeded:
 
 1. Register new revisions of `clinic-api`, `clinic-ui` and `clinic-migrate` with the
    release image (`infra/tools/register_task_definition.sh`).
-2. Run the migrate task; fail on a non-zero exit.
+2. Run the migrate task; fail on a non-zero exit
+   (`infra/tools/run_one_off_task.sh`).
 3. Update both services, wait until they are stable, and fail if a circuit-breaker
    rollback left either on its old revision.
-4. Register the new `clinic-purge` revision.
+4. Register a `clinic-smoke` revision and run it as a one-off task; fail on a non-zero
+   exit. It runs `python -m scripts.smoke_deploy` against `http://api.clinic.internal:8000`
+   through Cloud Map: readiness, then one booking confirmed twice with the same
+   `Idempotency-Key`, whose replay must match the first response exactly, then a read of
+   the appointment. It has no database credentials; readiness through the API already
+   proves the runtime user's login.
+5. Register the new `clinic-purge` revision.
 
 The purge schedule names its family without a revision, so it always runs the latest
-one. Registering it last means a release that fails at any earlier step leaves the
-schedule on the previous release's code. The deploy role therefore needs no Scheduler
-permissions. A failed release can leave unused `clinic-api`, `clinic-ui` or
-`clinic-migrate` revisions behind; they are free and are replaced by the next release.
+one. Registering it last means a release that fails at any earlier step, including the
+smoke, leaves the schedule on the previous release's code. The deploy role therefore
+needs no Scheduler permissions. A failed release can leave unused `clinic-api`,
+`clinic-ui`, `clinic-migrate` or `clinic-smoke` revisions behind; they are free and are
+replaced by the next release.
+
+**Each smoke leaves one synthetic booking.** It books the last free slot in the
+booking horizon, away from the dates a demo would pick, and nothing deletes it:
+appointments are never deleted by any job. On a stack that runs for months, these
+bookings slowly fill the end of the horizon; a `terraform destroy` clears them with the
+database. If a smoke fails after its booking, the release stops; the booking stays,
+and the next smoke picks another slot.
 
 ### Cost (us-east-2, on-demand, running all month)
 

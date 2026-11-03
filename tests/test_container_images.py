@@ -75,3 +75,16 @@ def test_ui_image_copies_every_ui_module_the_page_imports():
     for module in imported | {"app.py"}:
         assert module in copied.group(1).split(), module
         assert f"!{module}" in allowed, module
+
+
+def test_api_image_carries_every_script_a_task_definition_runs():
+    copied = re.search(r"^COPY (scripts/.+) \./scripts/$", (ROOT / "Dockerfile").read_text(), re.M)
+    allowed = (ROOT / ".dockerignore").read_text().split()
+    run = set(re.findall(r'"scripts\.(\w+)"', (ROOT / "infra/terraform/app/ecs.tf").read_text()))
+    run |= set(
+        re.findall(r"python -m scripts\.(\w+)", (ROOT / "infra/terraform/app/ecs.tf").read_text())
+    )
+    assert copied and {"smoke_deploy", "purge_chat", "db_roles", "seed"} <= run
+    for name in run:
+        assert f"scripts/{name}.py" in copied.group(1).split(), name
+        assert f"!scripts/{name}.py" in allowed, name

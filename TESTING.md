@@ -94,7 +94,7 @@ Run the same steps locally, in order:
 A second job, `containers`, runs on native amd64 and arm64 runners (no emulation). It
 builds the API and UI images, checks that each matches the runner architecture and
 runs as uid 10001, starts the [container stack](#container-stack), runs
-`scripts/smoke_stack.py` and always tears the stack down. Locally that is
+`scripts/smoke_stack.py` and `scripts/smoke_deploy.py`, and always tears the stack down. Locally that is
 `make stack-up stack-smoke stack-down`.
 
 Changes under `infra/` or to the workflows also run
@@ -255,11 +255,20 @@ test database on 15433, so all three can coexist.
 
 ```bash
 make stack-up      # build, start and wait for every health check
-make stack-smoke   # liveness, readiness, /info, one demo catalog turn, UI health
+make stack-smoke   # liveness, readiness, /info, one demo catalog turn, UI health, one booking
 make stack-down    # remove containers and the database
 ```
 
-`scripts/smoke_stack.py` uses only the standard library, so it runs without the venv.
+`scripts/smoke_stack.py` and `scripts/smoke_deploy.py` use only the standard library,
+so they run without the venv. `smoke_deploy.py` is the same booking smoke the deploy
+workflow runs inside the VPC after each release: readiness (the API's database login),
+the last free slot in the booking horizon, a proposal, two confirms with one
+`Idempotency-Key` whose replay must match in status, body, appointment and trace ID,
+and a read of the appointment. It exits non-zero on the first failure.
+`tests/test_smoke_deploy.py` runs it against the real app on PostgreSQL and checks that
+an altered replay, a second booking and failing readiness each fail it. A browser test
+of the UI through CloudFront (for example with Playwright) is not part of the suite; it
+is optional future work.
 
 ## Infrastructure checks
 

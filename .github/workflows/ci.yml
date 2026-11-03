@@ -95,6 +95,8 @@ jobs:
         run: docker compose -f compose.demo.yaml up -d --wait --wait-timeout 180
       - name: Smoke test (health, info, demo catalog turn, UI health)
         run: python3 scripts/smoke_stack.py
+      - name: Booking smoke (the post-deploy smoke, against the stack's API)
+        run: python3 scripts/smoke_deploy.py --api http://127.0.0.1:18000
       - name: Stack logs
         if: failure()
         run: docker compose -f compose.demo.yaml logs --no-color

@@ -4,7 +4,7 @@ locals {
     api = "${local.registry}/clinic-scheduling-api:${var.image_tag}"
     ui  = "${local.registry}/clinic-scheduling-ui:${var.image_tag}"
   }
-  log_groups = toset(["api", "ui", "migrate", "purge"])
+  log_groups = toset(["api", "ui", "migrate", "purge", "smoke"])
 
   # Same probes as the Dockerfiles (ECS ignores Dockerfile HEALTHCHECK), every 30 s.
   probe = "import urllib.request; urllib.request.urlopen('http://127.0.0.1:%d%s', timeout=3)"
@@ -67,6 +67,7 @@ locals {
   execution_roles = {
     runtime = { logs = ["api", "purge"], secrets = [aws_secretsmanager_secret.app_password.arn] }
     ui      = { logs = ["ui"], secrets = [] }
+    smoke   = { logs = ["smoke"], secrets = [] } # HTTP only: no database credentials
     migrate = {
       logs = ["migrate"]
       secrets = [
@@ -203,6 +204,17 @@ locals {
         secrets = local.app_password
       }
     }
+    # Post-deploy booking smoke, run by the deploy workflow inside the VPC. It talks to
+    # the API through Cloud Map only and holds no database credentials.
+    smoke = {
+      family = "clinic-smoke", memory = 512, role = "smoke"
+      container = {
+        image       = local.images.api
+        command     = ["python", "-m", "scripts.smoke_deploy", "--api", "http://api.clinic.internal:8000"]
+        environment = []
+        secrets     = []
+      }
+    }
   }
 }
 
@@ -228,7 +240,7 @@ resource "aws_ecs_task_definition" "task" {
 
 # ---------------------------------------------------------------------------
 # Services. Tasks get a public IP for outbound HTTPS only; security groups admit no
-# inbound traffic except ALB -> UI and UI -> API.
+# inbound traffic except ALB -> UI and UI or the smoke task -> API.
 
 resource "aws_ecs_service" "api" {
   #checkov:skip=CKV_AWS_333:Public IP for egress instead of a NAT gateway (decision b); no inbound rule allows it.
