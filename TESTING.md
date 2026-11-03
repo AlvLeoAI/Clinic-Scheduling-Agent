@@ -148,7 +148,8 @@ is refused, and drops the role afterwards.
 .venv/bin/python -m scripts.purge_chat --retention-days 7    # override CHAT_RETENTION_DAYS
 ```
 
-It uses `DATABASE_URL` and prints a JSON summary. What it deletes and keeps is described
+It uses `DATABASE_URL` and prints a JSON summary: eligible sessions, conversation items,
+turn hashes and stored replies (`assistant_messages`). What it deletes and keeps is described
 in [security and privacy](docs/SECURITY_PRIVACY.md#chat-retention);
 `tests/test_chat_retention.py` covers it.
 
