@@ -118,7 +118,9 @@ Remaining network exposure, by design:
   definitions (an action AWS does not scope by resource), run the migrate task and
   update the two services. In effect, it can deploy any code under this stack's
   execution roles, so the reviewer approval is the control. It cannot change IAM, read
-  Terraform state or reach the database.
+  Terraform state, reach the database or change the purge schedule. The schedule runs
+  the purge family's latest revision, which the workflow registers only after a release
+  has succeeded.
 
 ## Authentication and ownership
 

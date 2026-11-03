@@ -70,6 +70,9 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
@@ -89,28 +92,17 @@ jobs:
           fi
           jq . "$RUNNER_TEMP/deploy.json"
           echo "ready=true" >> "$GITHUB_OUTPUT"
-      - name: Register task definitions with the new images
+      # purge is registered last: the schedule runs the family's latest revision, so it
+      # must never point at code from a release that failed after this step.
+      - name: Register the release's task definitions (not purge)
         if: steps.params.outputs.ready == 'true'
         run: |
           set -euo pipefail
           cfg="$RUNNER_TEMP/deploy.json"
-          for key in api ui migrate purge; do
+          for key in api ui migrate; do
             family=$(jq -r --arg k "$key" '.families[$k]' "$cfg")
             repo=$(jq -r 'if $k == "ui" then .repository_ui else .repository_api end' --arg k "$key" "$cfg")
-            aws ecs describe-task-definition --task-definition "$family" --include TAGS > "$RUNNER_TEMP/current.json"
-            jq --arg image "$repo:$IMAGE_TAG" '
-              .taskDefinition
-              | .containerDefinitions |= map(.image = $image)
-              | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities,
-                    .registeredAt, .registeredBy, .deregisteredAt)
-            ' "$RUNNER_TEMP/current.json" > "$RUNNER_TEMP/next.json"
-            tags=$(jq -c '.tags // []' "$RUNNER_TEMP/current.json")
-            if [ "$tags" != "[]" ]; then
-              jq --argjson tags "$tags" '. + {tags: $tags}' "$RUNNER_TEMP/next.json" > "$RUNNER_TEMP/tagged.json"
-              mv "$RUNNER_TEMP/tagged.json" "$RUNNER_TEMP/next.json"
-            fi
-            arn=$(aws ecs register-task-definition --cli-input-json "file://$RUNNER_TEMP/next.json" \
-              --query taskDefinition.taskDefinitionArn --output text)
+            arn=$(infra/tools/register_task_definition.sh "$family" "$repo:$IMAGE_TAG")
             echo "$key -> $arn"
             echo "TASKDEF_${key^^}=$arn" >> "$GITHUB_ENV"
           done
@@ -152,3 +144,11 @@ jobs:
             test "$running" = "${pair#*=}" || { echo "${pair%%=*} rolled back to $running" >&2; exit 1; }
           done
           echo "Deployed $IMAGE_TAG to $(jq -r .url "$cfg")"
+      - name: Register the purge revision (only after a healthy release)
+        if: steps.params.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cfg="$RUNNER_TEMP/deploy.json"
+          arn=$(infra/tools/register_task_definition.sh "$(jq -r .families.purge "$cfg")" \
+            "$(jq -r .repository_api "$cfg"):$IMAGE_TAG")
+          echo "purge -> $arn (the schedule runs it from the next purge)"
