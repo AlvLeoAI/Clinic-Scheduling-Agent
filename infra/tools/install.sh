@@ -33,5 +33,5 @@ fetch() { # name url
 
 fetch terraform "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${arch}.zip"
 fetch tflint "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_${arch}.zip"
-"$dest/terraform" version | head -1
-"$dest/tflint" --version | head -1
+"$dest/terraform" version | sed -n 1p
+"$dest/tflint" --version | sed -n 1p
