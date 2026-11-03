@@ -101,8 +101,10 @@ Remaining network exposure, by design:
   internal ALB, the ALB to the UI, and the UI to the API, which carries the session
   bearer. TLS covers browser to CloudFront and the API to the database
   (`verify-full`, with `rds.force_ssl` on).
-- The ALB accepts HTTP from the private subnets, where CloudFront places its VPC-origin
-  interfaces. The database also lives there but has no egress rules.
+- The ALB accepts HTTP only from the CloudFront origin-facing managed prefix list. It
+  is internal, so only CloudFront VPC origins in this VPC can reach it. Admitting
+  CloudFront's service-managed VPC-origin security group instead would limit it to
+  this account's distributions, but that group exists only after the first apply.
 - The deploy role can be assumed only by workflow jobs in the `aws-sandbox` GitHub
   environment (main branch, required reviewer). It can push images, register task
   definitions (an action AWS does not scope by resource), run the migrate task and
