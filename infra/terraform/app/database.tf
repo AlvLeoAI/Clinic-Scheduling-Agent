@@ -12,7 +12,6 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_parameter_group" "main" {
-  #checkov:skip=CKV2_AWS_30:log_statement=all would log the clinic_app password set by scripts.db_roles.
   name   = "${local.name}-pg16"
   family = "postgres16"
 
