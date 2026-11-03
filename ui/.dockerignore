@@ -4,4 +4,5 @@
 !requirements.lock
 !__init__.py
 !client.py
+!confirmation.py
 !app.py

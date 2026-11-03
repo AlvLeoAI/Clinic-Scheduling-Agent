@@ -16,7 +16,7 @@ ENV PATH=/opt/venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHON
 RUN useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin clinic
 WORKDIR /srv
 COPY --from=build /opt/venv /opt/venv
-COPY __init__.py client.py app.py ./ui/
+COPY __init__.py client.py confirmation.py app.py ./ui/
 USER 10001
 EXPOSE 8501
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \

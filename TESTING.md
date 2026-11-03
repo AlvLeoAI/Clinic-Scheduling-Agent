@@ -214,14 +214,30 @@ keeps the session bearer in server-side Streamlit state, and has no database dri
 - Each proposal is a card with an expiry countdown and a separate **Confirm** button.
   Its `Idempotency-Key` is created once per proposal and kept in session state, so a
   rerun or double click resends the same key and books once.
+- The card is a small state machine (`ui/confirmation.py`): pending, confirming,
+  uncertain, confirmed or failed. A confirm that ends in a retryable error (API
+  unreachable, timeout, 503) is **uncertain**, because it may have booked. The card
+  then offers **Check booking status**, which resends the same key. The server answers
+  a known key with its stored outcome before checking the proposal, so the check works
+  after the TTL and never books twice. A confirm interrupted mid-request is also
+  uncertain. Confirm stays disabled for a proposal that is expired, superseded or past
+  its TTL, unless its outcome is uncertain.
 - `SLOT_TAKEN`, `PROPOSAL_EXPIRED`, `PROPOSAL_SUPERSEDED` and
   `AGENT_PROVIDER_DISABLED` get specific messages; a retryable 503 offers a retry that
   reuses the same `client_message_id`.
 
-HTTP logic lives in `ui/client.py` (httpx only); `tests/test_ui_client.py` covers it
-with `httpx.MockTransport` in the main suite, without Streamlit. To run the page
+HTTP logic lives in `ui/client.py` (httpx only) and the card's states in
+`ui/confirmation.py`; `tests/test_ui_client.py` and `tests/test_ui_confirmation.py`
+cover them with `httpx.MockTransport` in the main suite, without Streamlit. The
+confirmation tests simulate a lost response before and after the TTL and a superseded
+proposal with time left. To run the page
 outside containers, install the UI lock into its own venv and run
 `PYTHONPATH=. API_BASE_URL=http://127.0.0.1:8000 streamlit run ui/app.py`.
+
+Recovery lasts only as long as the Streamlit session: the bearer and the keys live in
+server-side `session_state`, so reloading the tab or restarting the UI task starts a
+new session, and an uncertain booking can no longer be checked from the UI. The CLI's
+restart recovery (its 0600 state file) does not apply to the UI.
 
 ## Container stack
 

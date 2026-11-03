@@ -122,6 +122,12 @@ Remaining network exposure, by design:
   model. Another session's resources return 404.
 - The CLI keeps its bearer and idempotency keys in a gitignored file with mode 0600,
   bound to the demo backend; it refuses a state file with wrong permissions or scope.
+- The Streamlit UI keeps its bearer and idempotency keys only in server-side
+  `session_state`; they never reach the browser. A tab reload or a UI task restart
+  discards them, so a confirmation whose outcome was uncertain can no longer be checked
+  from the UI. The booking itself is safe either way (one key books at most once), but
+  the user cannot learn its outcome there. The CLI's recovery path, which reloads its
+  key from the 0600 file after a restart, does not transfer to the UI.
 
 ## Logging and errors
 
