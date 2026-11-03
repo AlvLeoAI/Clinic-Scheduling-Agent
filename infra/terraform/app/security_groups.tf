@@ -33,16 +33,23 @@ resource "aws_security_group" "db" {
   vpc_id      = aws_vpc.main.id
 }
 
-# CloudFront places its VPC-origin network interfaces in the ALB's (private) subnets.
-# Nothing else that could send HTTP lives there: RDS has no egress.
+# VPC-origin requests keep CloudFront's origin-facing source addresses, so the ALB
+# admits that managed prefix list (AWS's option 1; it exists before the VPC origin
+# does). The ALB is internal, so only VPC origins in this VPC can reach it. The
+# stricter option 2, CloudFront-VPCOrigins-Service-SG, only exists after the VPC
+# origin is created and would need a second apply.
+data "aws_ec2_managed_prefix_list" "cloudfront_origin_facing" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
 resource "aws_vpc_security_group_ingress_rule" "alb_from_cloudfront" {
-  for_each          = toset(local.private_cidrs)
+  #checkov:skip=CKV_AWS_260:Source is the CloudFront origin-facing prefix list, not 0.0.0.0/0; the check reads a rule without cidr_ipv4 as open.
   security_group_id = aws_security_group.alb.id
-  description       = "HTTP from CloudFront VPC-origin interfaces"
+  description       = "HTTP from CloudFront VPC origins (origin-facing prefix list)"
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
-  cidr_ipv4         = each.value
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront_origin_facing.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_ui" {
