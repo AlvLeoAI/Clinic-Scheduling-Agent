@@ -107,3 +107,38 @@ def test_current_tree_checker_rejects_planted_material(tmp_path, fault):
     assert material not in json.dumps(bad)
     path.unlink()
     assert check_tree(tmp_path)["status"] == "PASS"
+
+
+def test_current_tree_checker_scans_what_git_would_commit(tmp_path):
+    import json
+    import shutil
+    import subprocess
+
+    from scripts.check_synthetic import ROOT, check_tree
+
+    for relative in ["data/appointments.json", "evaluations/datasets/scheduling_v1.json"]:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, path)
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / ".gitignore").write_text(".terraform/\ndocs/evidence/M6_*_cases.json\n")
+    material = "sk-" + "x" * 32
+    # Ignored build output (a provider binary) is never committed, so it is not scanned.
+    provider = tmp_path / "infra/.terraform/providers/terraform-provider-aws"
+    provider.parent.mkdir(parents=True)
+    provider.write_bytes(b"\x7fELF" + material.encode())
+    assert check_tree(tmp_path)["status"] == "PASS"
+    assert check_tree(tmp_path)["file_source"] == "git"
+
+    # An untracked file that is not ignored would be committed by `git add .`.
+    untracked = tmp_path / "notes.txt"
+    untracked.write_text(material)
+    bad = check_tree(tmp_path)
+    assert bad["unknown_candidate_paths"] == ["notes.txt"] and material not in json.dumps(bad)
+    untracked.unlink()
+
+    # Ignored regression ledgers are still scanned: they are archived outside Git.
+    ledger = tmp_path / "docs/evidence/M6_booking_regression_cases.json"
+    ledger.parent.mkdir(parents=True)
+    ledger.write_text(json.dumps({"session_token": "private-synthetic-bearer"}))
+    assert check_tree(tmp_path)["unknown_candidate_paths"] == [str(ledger.relative_to(tmp_path))]

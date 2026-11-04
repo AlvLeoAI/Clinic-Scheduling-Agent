@@ -65,7 +65,7 @@ tests and demos one at a time, never concurrently.
 Run the same steps locally, in order:
 
 ```bash
-.venv/bin/python -m scripts.check_synthetic                     # current-tree secrets and fixtures
+.venv/bin/python -m scripts.check_synthetic                     # secrets in what Git would commit; fixtures
 .venv/bin/ruff check app cli scripts alembic tests evaluations ui
 .venv/bin/ruff format --check app cli scripts alembic tests evaluations ui
 .venv/bin/alembic upgrade head && .venv/bin/alembic check       # migrations match models
