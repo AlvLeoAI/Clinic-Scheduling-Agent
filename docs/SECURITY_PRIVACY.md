@@ -158,7 +158,10 @@ the reply the user sees is rendered from templates and database reads. See
 
 `scripts/check_synthetic.py` runs in CI and fails on unknown credential-like strings
 or sensitive file types in the current tree; known fake test credentials used only
-with `MockTransport` are listed explicitly. It does not scan Git history; history was
+with `MockTransport` are listed explicitly. In a Git checkout it scans what `git add .`
+would commit (tracked files plus untracked files that are not ignored) and the ignored
+regression ledgers under `docs/evidence/`, so local build output such as Terraform
+provider binaries does not fail it; without Git it walks the tree. It does not scan Git history; history was
 checked separately with gitleaks (see the README). Tests block all real HTTP.
 
 ## Known limitations

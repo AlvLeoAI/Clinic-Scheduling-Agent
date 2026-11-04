@@ -41,34 +41,60 @@ PATTERNS = [
 ]
 
 
+def git_files(root):
+    """Files Git tracks or would track, plus ignored regression ledgers; None without Git.
+
+    Ignored build output (`.terraform/` providers, virtualenvs, caches) is never
+    committed, so it is not scanned. The ignored `docs/evidence/M6*` ledgers are,
+    because they are archived outside the repository.
+    """
+    if not (root / ".git").exists():
+        return None
+
+    def listed(*args):
+        out = subprocess.check_output(["git", "ls-files", "-z", *args], cwd=root)
+        return {name for name in out.decode().split("\0") if name}
+
+    names = listed("--cached", "--others", "--exclude-standard")
+    names |= listed("--others", "--ignored", "--exclude-standard", "--", "docs/evidence")
+    return [root / name for name in sorted(names)]
+
+
+def walk_files(root):
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = [name for name in dirs if name not in SKIP]
+        yield from (Path(directory) / name for name in files)
+
+
 def check_tree(root=ROOT):
     root = Path(root)
     candidates, mock_matches, scanned = set(), 0, 0
-    for directory, dirs, files in os.walk(root):
-        dirs[:] = [name for name in dirs if name not in SKIP]
-        for name in files:
-            path = Path(directory) / name
-            relative = path.relative_to(root)
-            if path.is_symlink() or (name.startswith(".env") and name != ".env.example"):
-                continue
-            if path.suffix.lower() in {".zip", ".mp3", ".wav", ".pyc", ".db", ".sqlite"}:
-                continue
-            scanned += 1
-            value = path.read_bytes()
-            for pattern in PATTERNS:
-                for match in pattern.finditer(value):
-                    if match.group(1) in KNOWN:
-                        mock_matches += 1
-                    else:
-                        candidates.add(str(relative))
-            if relative.parts[:2] == ("docs", "evidence") and any(
-                part.startswith("M6") for part in relative.parts[2:]
-            ):
-                if re.search(
-                    rb'(?i)"(?:api[_-]?key|session_token|token_hash|authorization|patient_name|phone|visit_reason)"\s*:',
-                    value,
-                ):
+    files = git_files(root)
+    for path in walk_files(root) if files is None else files:
+        name = path.name
+        relative = path.relative_to(root)
+        if path.is_symlink() or not path.is_file():
+            continue  # a symlink's target is scanned in place; deleted tracked files are gone
+        if name.startswith(".env") and name != ".env.example":
+            continue
+        if path.suffix.lower() in {".zip", ".mp3", ".wav", ".pyc", ".db", ".sqlite"}:
+            continue
+        scanned += 1
+        value = path.read_bytes()
+        for pattern in PATTERNS:
+            for match in pattern.finditer(value):
+                if match.group(1) in KNOWN:
+                    mock_matches += 1
+                else:
                     candidates.add(str(relative))
+        if relative.parts[:2] == ("docs", "evidence") and any(
+            part.startswith("M6") for part in relative.parts[2:]
+        ):
+            if re.search(
+                rb'(?i)"(?:api[_-]?key|session_token|token_hash|authorization|patient_name|phone|visit_reason)"\s*:',
+                value,
+            ):
+                candidates.add(str(relative))
     dataset = Dataset.model_validate_json(
         (root / "evaluations/datasets/scheduling_v1.json").read_text()
     )
@@ -89,6 +115,7 @@ def check_tree(root=ROOT):
     return {
         "status": "FAIL" if candidates or tracked_sensitive else "PASS",
         "scope": "limited current text tree and artificial fixtures; history NOT SCANNED",
+        "file_source": "git" if files is not None else "walk",
         "files_scanned": scanned,
         "unknown_candidate_paths": sorted(candidates),
         "known_placeholder_mock_matches": mock_matches,
