@@ -8,7 +8,8 @@ import pytest
 
 pytestmark = pytest.mark.unit
 ROOT = Path(__file__).resolve().parents[1]
-PIN = re.compile(r"^([a-z0-9][a-z0-9._-]*)==(\S+)$", re.MULTILINE)
+# `name==version`, optionally followed by an environment marker and a line continuation.
+PIN = re.compile(r"^([a-z0-9][a-z0-9._-]*)==([^\s;\\]+)", re.MULTILINE)
 DIGEST = re.compile(r"python:3\.12-slim@sha256:[0-9a-f]{64}")
 
 
@@ -23,6 +24,43 @@ def test_runtime_lock_matches_foundation_lock_without_test_tools():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     declared = {re.split(r"[\[<>=!~ ]", spec)[0].lower() for spec in project["dependencies"]}
     assert declared <= set(runtime)
+
+
+LOCKS = [
+    "requirements-foundation.lock",
+    "requirements-runtime.lock",
+    "ui/requirements.lock",
+    "infra/tools/checkov.lock",
+]
+# Every command that installs one of the locks, and the lock it installs.
+INSTALLS = {
+    "Dockerfile": "requirements-runtime.lock",
+    "ui/Dockerfile": "requirements.lock",
+    "Makefile": "requirements-foundation.lock",
+    ".github/workflows/ci.yml": "requirements-foundation.lock",
+    ".github/workflows/infra.yml": "infra/tools/checkov.lock",
+    "scripts/reproduce_local.py": "requirements-foundation.lock",
+}
+
+
+@pytest.mark.parametrize("lock", LOCKS)
+def test_every_pin_in_a_lock_carries_a_hash(lock):
+    # A requirement is a `name==version` line plus its continuation lines.
+    entries = re.split(r"\n(?=[a-z0-9])", (ROOT / lock).read_text().split("\n", 2)[2])
+    assert entries and len(entries) == len(pins(lock))
+    for entry in entries:
+        assert re.search(r"--hash=sha256:[0-9a-f]{64}", entry), entry.splitlines()[0]
+
+
+@pytest.mark.parametrize(("path", "lock"), INSTALLS.items())
+def test_every_lock_install_requires_hashes(path, lock):
+    text = (ROOT / path).read_text()
+    lines = [line for line in text.splitlines() if lock in line and "install" in line]
+    if path == "scripts/reproduce_local.py":  # uv pip sync, one argument per line
+        start = text.index('"sync"')
+        lines = [text[start : text.index(f'"{lock}"', start)]]
+    assert lines, f"{path} no longer installs {lock}"
+    assert all("--require-hashes" in line for line in lines), lines
 
 
 @pytest.mark.parametrize("dockerfile", ["Dockerfile", "ui/Dockerfile"])
