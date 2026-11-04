@@ -6,7 +6,7 @@ ARG PYTHON_IMAGE=python:3.12-slim@sha256:b18b261e1b4974b4f321451ad5251ded85abb22
 FROM ${PYTHON_IMAGE} AS build
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 COPY requirements.lock /tmp/requirements.lock
-RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-deps -r /tmp/requirements.lock
+RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-deps --require-hashes -r /tmp/requirements.lock
 
 FROM ${PYTHON_IMAGE}
 ENV PATH=/opt/venv/bin:$PATH PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/srv \

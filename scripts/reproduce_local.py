@@ -109,6 +109,7 @@ def reproduce():
                     "pip",
                     "sync",
                     "--offline",
+                    "--require-hashes",
                     "--python",
                     ".venv/bin/python",
                     "requirements-foundation.lock",

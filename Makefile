@@ -30,7 +30,7 @@ help: ## List targets
 
 install: ## Create .venv and install pinned dependencies
 	$(PYTHON) -m venv $(VENV)
-	$(BIN)/pip install -q -r requirements-foundation.lock
+	$(BIN)/pip install -q --require-hashes -r requirements-foundation.lock
 
 db-up: ## Start the throwaway test database (tmpfs, port 15433) and wait until ready
 	@if [ -n "$$(docker ps -q -f name=^$(PG_CONTAINER)$$)" ]; then \

@@ -7,7 +7,7 @@ FROM ${PYTHON_IMAGE} AS build
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 COPY requirements-runtime.lock /tmp/requirements-runtime.lock
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-deps -r /tmp/requirements-runtime.lock
+    && /opt/venv/bin/pip install --no-deps --require-hashes -r /tmp/requirements-runtime.lock
 # AWS RDS CA bundle for sslmode=verify-full, pinned by SHA-256: if AWS rotates the file
 # the build fails here instead of shipping an unverified trust anchor.
 ARG RDS_CA_URL=https://truststore.pki.rds.amazonaws.com/us-east-2/us-east-2-bundle.pem

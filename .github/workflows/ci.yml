@@ -42,7 +42,7 @@ jobs:
       - name: Install pinned runtime and test dependencies
         run: |
           python -m venv .venv
-          .venv/bin/python -m pip install -r requirements-foundation.lock
+          .venv/bin/python -m pip install --require-hashes -r requirements-foundation.lock
       - name: Current-tree secrets and synthetic fixtures
         run: .venv/bin/python -m scripts.check_synthetic
       - name: Ruff

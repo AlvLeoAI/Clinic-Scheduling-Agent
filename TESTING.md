@@ -185,6 +185,12 @@ The root `Dockerfile` builds the API from `requirements-runtime.lock`, which is
 from `pyproject.toml` with `uv pip compile` (commands are in each file's header);
 `tests/test_container_images.py` fails if their pins drift apart.
 
+Every lock (these two, `ui/requirements.lock` and `infra/tools/checkov.lock`) carries
+SHA-256 hashes for all platforms (`--universal --generate-hashes`), and every install
+(`make install`, CI, both Dockerfiles, `scripts/reproduce_local.py`) uses
+`--require-hashes`, so a changed file on the index fails the install instead of being
+used. The same test file fails if a pin lacks a hash or an install drops the flag.
+
 The image runs as uid 10001, reads configuration only from environment variables and
 starts `uvicorn` on port 8000. Its `HEALTHCHECK` uses the DB-free liveness endpoint
 `/api/v1/health/live`; `/api/v1/health` is readiness and also checks the database.
