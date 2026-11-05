@@ -109,34 +109,14 @@ shows the tool flow and backend enforcement, not natural-language quality. The s
 picks its chat provider with `AGENT_PROVIDER` (`disabled` by default, `demo` for the
 same grammar against the real clock, or `openai`). More in [testing](TESTING.md).
 
-## Security history
-
-This repository starts from a clean root commit (`6521b87`, 2026-10-16). An earlier
-prototype repository, public for a period under a different name, had committed archives
-containing OpenAI and ElevenLabs API keys, along with demo appointment records and audio
-from a retired voice version.
-
-What was done:
-
-- The exposed OpenAI and ElevenLabs keys were revoked and rotated.
-- The project was rebuilt from a reviewed file allowlist. No legacy commits, archives,
-  audio or appointment records were carried over, and the legacy repository was deleted.
-- gitleaks v8.30.1 reports no findings across every ref of this repository. Every blob
-  ever committed here is text: no audio, archives or credential files.
-- CI runs a current-tree secret and synthetic-fixture check on every push.
-
-What remains: nothing in this repository. Provider usage for the exposure window was
-reviewed with no unexpected activity.
-
-Release status: OPEN
-
 ## Documentation
 
 - [System design](SYSTEM_DESIGN.md): components, data model, key decisions.
 - [API design](docs/API_DESIGN.md): routes, errors, idempotency and recovery.
 - [Evaluation](docs/EVALUATION.md): graders, contracts, live smoke results.
 - [Testing](TESTING.md): running the suite, CI and local setup.
-- [Security and privacy](docs/SECURITY_PRIVACY.md): controls, limitations, licensing.
+- [Security and privacy](docs/SECURITY_PRIVACY.md): current controls, known limitations,
+  licensing and historical security context.
 - [Project history](docs/history/): phase records, milestone evidence, superseded reports.
 
 All data is synthetic: fictitious clinicians and UUID identifiers. The CLI and the test
@@ -145,3 +125,5 @@ suite use a fixed 2030 clock (the service tests advance it); the browser tests, 
 ahead of today. Tests block real HTTP except the loopback-only service and browser
 tests ([testing](TESTING.md)).
 MIT licensed; dependencies keep their own licenses ([notices](THIRD_PARTY_NOTICES.md)).
+
+Release status: OPEN

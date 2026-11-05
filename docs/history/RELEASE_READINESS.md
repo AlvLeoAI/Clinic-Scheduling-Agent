@@ -2,7 +2,7 @@
 
 **Public release: no open gates (2026-10-30).** Historical security (SEC-01, SEC-02)
 and licensing are closed by owner decision; see the README
-[Security history](../../README.md#security-history). The owner changes repository
+[Security history](../SECURITY_HISTORY.md). The owner changes repository
 visibility directly. Remaining NOT RUN rows below are scope limitations of a
 synthetic prototype, not release gates.
 

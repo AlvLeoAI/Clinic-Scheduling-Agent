@@ -1,6 +1,6 @@
 # Synthetic evidence provenance
 
-> Superseded on 2026-10-30: see README [Security history](../../../README.md#security-history).
+> Superseded on 2026-10-30: see README [Security history](../../SECURITY_HISTORY.md).
 
 Prepared during R1A (2026-10-16) by static review of preserved M0–M6 source and artifacts. This is provenance/content review, not a new evaluator or database run. No vendor API, GitHub API or original database was used.
 
