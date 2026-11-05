@@ -19,11 +19,11 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.clock import utc_now
-from app.db.models import Appointment
+from app.db.models import Appointment, ChatSession
 from app.db.seed import seed_catalog
 from tests.support.live_stack import FaultProxy, LiveApi, counts, delete_sessions, write_receipt
 
@@ -245,3 +245,90 @@ def test_changing_the_practitioner_hides_the_cached_slots(ui):
     sync_api.expect(
         page.locator('[data-testid="stSelectbox"]').filter(has_text="Slot")
     ).to_have_count(0)
+
+
+def lose_the_session(ui) -> None:
+    # The API now answers the page's bearer with a real 401, as it would after the TTL.
+    with Session(ui.engine) as db:
+        db.execute(
+            update(ChatSession)
+            .where(ChatSession.id.in_(ui.proxy.session_ids))
+            .values(expires_at=ChatSession.created_at + timedelta(microseconds=1))
+        )
+        db.commit()
+    button(ui.page, "Show catalog").click()
+    sync_api.expect(ui.page.get_by_text("Your session has expired")).to_be_visible()
+
+
+def test_a_confirm_drawn_for_an_expired_session_is_not_sent_with_the_new_one(ui):
+    page, proxy = ui.page, ui.proxy
+    check_availability(page, 6)
+    propose(page)
+    sync_api.expect(button(page, "Confirm booking")).to_be_enabled()
+    lose_the_session(ui)
+
+    # The chat 401 dropped the bearer; this render still shows the old card's button.
+    button(page, "Confirm booking").click()
+    sync_api.expect(button(page, "Confirm booking")).to_have_count(0)
+    sync_api.expect(page.get_by_test_id("stStatusWidget")).to_have_count(0)
+    stale_requests = len(proxy.confirm_keys)
+    notice = page.get_by_text("was not sent").count()
+
+    # The replacement session's proposal is not blocked by a hidden unresolved flow.
+    check_availability(page, 6)
+    propose(page)
+    sync_api.expect(button(page, "Confirm booking")).to_be_visible()
+    hidden_block = page.get_by_text("An earlier confirmation is unresolved").count()
+    assert (stale_requests, notice, hidden_block) == (0, 1, 0)
+    button(page, "Confirm booking").click()
+    appointment = recovered_id(page)
+    result = {
+        "case": "browser_confirm_from_an_expired_session",
+        "evidence": "browser",
+        "fault_boundary": "chat answered 401 (session expired in the database), then Confirm",
+        "stale_confirm_requests_reaching_api": stale_requests,
+        "sessions_created": len(proxy.session_ids),
+        "confirm_requests_reaching_api": len(proxy.confirm_keys),
+        "recovered_appointment_id": appointment,
+        "db_appointment_ids": booked_ids(ui.engine, proxy.session_ids[1:]),
+        **counts(ui.engine, proxy.session_ids),
+    }
+    write_receipt("browser_confirm_from_an_expired_session", result)
+    assert stale_requests == 0 and len(proxy.session_ids) == 2
+    assert result["db_appointment_ids"] == [appointment] and result["appointments"] == 1
+
+
+def test_an_unresolved_confirm_outlives_its_session_and_keeps_blocking(ui):
+    page, proxy = ui.page, ui.proxy
+    check_availability(page, 7)
+    propose(page)
+    proxy.arm("lose_response")
+    button(page, "Confirm booking").click()
+    sync_api.expect(page.get_by_text("The booking outcome is unknown")).to_be_visible()
+    lose_the_session(ui)
+
+    # Its check cannot be sent with the replacement bearer: that would ask another
+    # session about this key.
+    button(page, "Check booking status").click()
+    sync_api.expect(page.get_by_text("cannot be verified from this page")).to_be_visible()
+    sync_api.expect(button(page, "Check booking status")).to_be_disabled()
+    checks_after_expiry = len(proxy.confirm_keys) - 1
+
+    # A proposal in the replacement session stays blocked by the unresolved card.
+    check_availability(page, 7)
+    propose(page)
+    sync_api.expect(page.get_by_text("An earlier confirmation is unresolved above")).to_be_visible()
+    sync_api.expect(page.get_by_text("cannot be verified from this page")).to_be_visible()
+    sync_api.expect(button(page, "Confirm booking")).to_be_disabled()
+    result = {
+        "case": "browser_unresolved_confirm_after_session_expiry",
+        "evidence": "browser",
+        "fault_boundary": "confirm response lost after commit, then chat answered 401",
+        "checks_sent_after_expiry": checks_after_expiry,
+        "sessions_created": len(proxy.session_ids),
+        "db_appointment_ids": booked_ids(ui.engine, proxy.session_ids),
+        **counts(ui.engine, proxy.session_ids),
+    }
+    write_receipt("browser_unresolved_confirm_after_session_expiry", result)
+    assert checks_after_expiry == 0 and proxy.lost == 1
+    assert result["appointments"] == 1 and result["idempotency_records"] == 1

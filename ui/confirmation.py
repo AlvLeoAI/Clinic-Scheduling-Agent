@@ -13,6 +13,10 @@ Only three answers prove that a key did not book: PROPOSAL_EXPIRED, PROPOSAL_SUP
 and SLOT_TAKEN (the server stores them under the key, so a retry returns them again).
 Every other error, including 401, 500, unknown codes and malformed bodies, leaves the
 outcome unknown.
+
+A confirm is sent only with the bearer of the session that received the proposal. A
+button drawn before that bearer was dropped or replaced sends nothing: the new session
+does not own the proposal, and its bearer cannot check another session's key.
 """
 
 from collections.abc import Mapping, MutableMapping
@@ -93,6 +97,32 @@ def confirm(
         return flow
     flow.state = ConfirmState.CONFIRMED
     return flow
+
+
+def send_confirm(
+    api: ConfirmApi, state: Mapping, proposal: Proposal, owner: UUID | None
+) -> Flow | None:
+    """Confirm with the page's bearer if `owner` is its session; None means nothing was sent.
+
+    `state` is the page state: `token` and `session_id` of the live session (no token
+    after a 401), `flows` and `confirm_keys`.
+    """
+    token = state.get("token")
+    if token is None or owner is None or owner != state.get("session_id"):
+        return None
+    return confirm(api, token, proposal, state["flows"], state["confirm_keys"])
+
+
+def stale_notice(flow: Flow | None) -> str:
+    if flow is not None and flow.state in UNRESOLVED:
+        return (
+            "The session that sent this confirmation has expired, so its status was not "
+            "checked. The booking may exist."
+        )
+    return (
+        "This proposal belonged to a session that has expired, so it was not sent and "
+        "booked nothing. Ask for a new proposal."
+    )
 
 
 def cards(

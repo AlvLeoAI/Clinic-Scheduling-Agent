@@ -20,6 +20,8 @@ from ui.confirmation import (
     carry_over,
     confirm,
     flow_for,
+    send_confirm,
+    stale_notice,
     uncertain_message,
 )
 
@@ -279,3 +281,59 @@ def test_a_new_session_keeps_only_unresolved_cards_and_marks_them_unverifiable()
     flow = flows[str(sent.proposal_id)]
     assert flow.unverifiable and action(sent, flow, NOW).enabled is False
     assert blocked_by_unresolved(flows, idle.proposal_id)
+
+
+def page_state(session_id, token=TOKEN, flows=None, keys=None):
+    # The keys ui/app.py keeps in st.session_state for the live session.
+    flows, keys = ({} if flows is None else flows), ({} if keys is None else keys)
+    return {"token": token, "session_id": session_id, "flows": flows, "confirm_keys": keys}
+
+
+@pytest.mark.parametrize("stale", ["bearer-dropped", "session-replaced", "no-owner"])
+def test_a_button_from_another_session_sends_nothing(stale):
+    proposal = make_proposal()
+    server, api, _, _ = setup(proposal)
+    old = uuid4()
+    state = page_state(old)
+    owner = old
+    if stale == "bearer-dropped":
+        del state["token"]  # what show_error does after a 401
+    elif stale == "session-replaced":
+        state["session_id"] = uuid4()
+    else:
+        owner = None
+
+    assert send_confirm(api, state, proposal, owner) is None
+    assert server.keys == [] and state["flows"] == {} and state["confirm_keys"] == {}
+    assert "was not sent" in stale_notice(state["flows"].get(str(proposal.proposal_id)))
+
+
+def test_an_unresolved_confirm_is_not_checked_with_a_replacement_bearer():
+    first, second = make_proposal(), make_proposal()
+    server, api, flows, keys = lose_first_response(first)
+    old, new = uuid4(), uuid4()
+    flows, proposals, keys = carry_over(flows, {str(first.proposal_id): first}, keys)
+    state = page_state(new, "replacement", flows, keys)
+
+    assert send_confirm(api, state, first, old) is None
+    assert len(server.keys) == 1, "only the original confirm reached the server"
+    flow = flows[str(first.proposal_id)]
+    assert flow.state is ConfirmState.UNCERTAIN and flow.unverifiable
+    assert "may exist" in stale_notice(flow)
+    assert cards(proposals, flows, first.proposal_id) == [first]
+    # The replacement session's own proposal stays blocked while the outcome is unknown.
+    assert blocked_by_unresolved(flows, second.proposal_id)
+    assert action(second, flow_for(flows, second.proposal_id), NOW, blocked=True).enabled is False
+
+
+def test_the_replacement_session_confirms_its_own_proposal():
+    stale, fresh = make_proposal(), make_proposal()
+    server, api, flows, keys = setup(fresh)
+    old, new = uuid4(), uuid4()
+    flows, _, keys = carry_over({str(stale.proposal_id): Flow()}, {}, {})
+    state = page_state(new, "replacement", flows, keys)
+
+    assert send_confirm(api, state, stale, old) is None and flows == {}
+    assert not blocked_by_unresolved(flows, fresh.proposal_id)
+    flow = send_confirm(api, state, fresh, new)
+    assert flow.state is ConfirmState.CONFIRMED and server.bookings == 1
