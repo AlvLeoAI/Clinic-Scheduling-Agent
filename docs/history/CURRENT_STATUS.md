@@ -57,7 +57,7 @@ would need separate authorization and verification.
 ## Historical risk and owner decisions (closed 2026-10-30)
 
 R3D.1 was accepted as an audit deliverable. The owner recorded the following
-decisions on 2026-10-30; see the README [Security history](../../README.md#security-history).
+decisions on 2026-10-30; see the README [Security history](../SECURITY_HISTORY.md).
 
 | Topic | Evidence | Decision |
 | --- | --- | --- |

@@ -16,7 +16,19 @@ CURRENT_DOCS = (
     "docs/API_DESIGN.md",
     "docs/EVALUATION.md",
     "docs/SECURITY_PRIVACY.md",
+    "docs/SECURITY_HISTORY.md",
 )
+SECURITY_HISTORY = "docs/SECURITY_HISTORY.md"
+# The record keeps what the repository shows apart from what the owner reports, and
+# says what deleting and rebuilding cannot prove.
+HISTORY_SECTIONS = (
+    "## The retired prototype",
+    "### Supported by repository inspection",
+    "### Reported by the owner",
+    "## What this does not establish",
+)
+# Closure wording that no scan or report can support.
+UNBOUNDED_CLOSURE = re.compile(r"what remains:\s*nothing|nothing remains", re.IGNORECASE)
 # README declares the release status once; any block described elsewhere must cite
 # a blocker listed there, e.g. "- BLK-01: one-line reason".
 STATUS_LINE = re.compile(r"^Release status: (OPEN|BLOCKED)$", re.MULTILINE)
@@ -115,11 +127,28 @@ def release_status(readme):
     return declared[0], set(entries)
 
 
+def check_security_history(root=ROOT):
+    history = (root / SECURITY_HISTORY).read_text()
+    assert re.search(r"^# Security history$", history, re.MULTILINE), (
+        "The security history record is missing its heading."
+    )
+    missing = [s for s in HISTORY_SECTIONS if not re.search(rf"^{s}$", history, re.MULTILINE)]
+    assert not missing, "The security history record lacks a required section."
+    assert "](SECURITY_HISTORY.md)" in (root / "docs/SECURITY_PRIVACY.md").read_text(), (
+        "SECURITY_PRIVACY.md does not link to the security history."
+    )
+    assert "](docs/SECURITY_PRIVACY.md)" in (root / "README.md").read_text(), (
+        "README.md does not link to SECURITY_PRIVACY.md."
+    )
+    for name in CURRENT_DOCS:
+        assert not UNBOUNDED_CLOSURE.search((root / name).read_text()), (
+            "Current documentation claims an unbounded security closure."
+        )
+    return SECURITY_HISTORY
+
+
 def check_release_status(root=ROOT):
     readme = (root / "README.md").read_text()
-    assert re.search(r"^## Security history$", readme, re.MULTILINE), (
-        "README.md lacks a Security history section."
-    )
     status, blockers = release_status(readme)
     documents = current_documents(root)
     for path in documents:
@@ -157,6 +186,7 @@ def main():
                 links += 1
         snapshot = json.loads((ROOT / "docs/openapi.json").read_text())
         assert snapshot == app.openapi() and len(snapshot["paths"]) == 11
+        security_history = check_security_history()
         release = check_release_status()
         jargon_docs = check_phase_jargon()
         reconciliation = reconcile_m5()
@@ -170,7 +200,7 @@ def main():
                     "raw_layers": reconciliation["raw_layers"],
                     "hosted_ci_query": "NOT QUERIED BY THIS LOCAL CHECK",
                     "hosted_ci_evidence": "See the CI badge in README.md",
-                    "security_history": "PRESENT",
+                    "security_history": f"PRESENT in {security_history}",
                     "release_status": release["status"],
                     "release_blockers": release["blockers"],
                     "current_docs_checked": release["documents"],

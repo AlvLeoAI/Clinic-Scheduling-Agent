@@ -61,15 +61,19 @@ ledgers into `docs/evidence/`.
   move it. `README.md`, `SYSTEM_DESIGN.md`, `TESTING.md` are copied by name in
   `scripts/reproduce_local.py`.
 - Current docs are only: README, SYSTEM_DESIGN, TESTING, THIRD_PARTY_NOTICES,
-  docs/API_DESIGN, docs/EVALUATION, docs/SECURITY_PRIVACY. Phase records live in
+  docs/API_DESIGN, docs/EVALUATION, docs/SECURITY_PRIVACY, docs/SECURITY_HISTORY. Phase records live in
   `docs/history/`; it is frozen (link-path fixes only) and never gates CI.
 - `check_docs.py` enforces: exactly one `Release status: OPEN|BLOCKED` line in README;
   blocks described anywhere current must cite a `- BLK-NN: reason` listed in README;
   no phase codes (R1A, M5, S3...), "owner acceptance" or "UNDECIDED" in current docs.
   Use `BLK-NN` as a placeholder in examples.
 - No hardcoded test counts or commit hashes in current docs; the README CI badge is
-  the status.
-- Don't alter the README "Security history" section without the owner.
+  the status. One exception: `docs/SECURITY_HISTORY.md` may cite immutable provenance
+  identifiers (such as the clean root commit) and dated scan snapshots with their
+  actual scope; never stale release SHAs or floating test counts there either.
+- Don't alter `docs/SECURITY_HISTORY.md` (the security history, moved out of README)
+  without the owner. Keep repository evidence and owner-reported facts separate there,
+  and never claim a scan covers commits made after it ran.
 - AWS (`infra/terraform/`): account 086739225026, us-east-2, `AWS_PROFILE=clinic-sandbox`
   (SSO) for local runs; never another profile, never IAM users or access keys. Every
   root keeps `allowed_account_ids` and no `profile` in the provider. Only fmt, validate,

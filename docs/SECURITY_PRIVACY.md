@@ -1,7 +1,12 @@
 # Security, privacy and limitations
 
-This document describes current controls and known limitations. The history of the
-earlier credential exposure is in the README [Security history](../README.md#security-history).
+This document describes current controls and known limitations.
+
+**History.** An earlier prototype repository, since deleted, exposed OpenAI and
+ElevenLabs API keys and committed demo records and audio. This repository is not that
+prototype: it was rebuilt from a clean root without the prototype's history. The
+record, separating what the repository shows from what the owner reports, is in
+[security history](SECURITY_HISTORY.md).
 
 ## Data
 
@@ -166,7 +171,7 @@ with `MockTransport` are listed explicitly. In a Git checkout it scans what `git
 would commit (tracked files plus untracked files that are not ignored) and the ignored
 regression ledgers under `docs/evidence/`, so local build output such as Terraform
 provider binaries does not fail it; without Git it walks the tree. It does not scan Git history; history was
-checked separately with gitleaks (see the README). Tests block real HTTP, with two
+checked separately with gitleaks (see [security history](SECURITY_HISTORY.md)). Tests block real HTTP, with two
 explicit loopback-only exceptions: the `service` and `browser` tests (see
 [testing](../TESTING.md)).
 

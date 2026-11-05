@@ -1,6 +1,6 @@
 # Final acceptance matrix — AC-01 through AC-12
 
-These rows retain accepted M0–M6 safety evidence with later verification attributed separately. No application suite was rerun in R2D or this R3D.2 documentation phase. Hosted CI covers 378 tests at root `6521b87`, 616 at `9b0c0df` and 682 at committed `e1b572f` under explicit v1.2. These are offline checks; no live v1.2 model run occurred. Historical security and licensing are closed; see the README [Security history](../../README.md#security-history). See [current status](CURRENT_STATUS.md), [live evidence](LIVE_EVALUATION_REPORT.md) and [release scope](RELEASE_READINESS.md).
+These rows retain accepted M0–M6 safety evidence with later verification attributed separately. No application suite was rerun in R2D or this R3D.2 documentation phase. Hosted CI covers 378 tests at root `6521b87`, 616 at `9b0c0df` and 682 at committed `e1b572f` under explicit v1.2. These are offline checks; no live v1.2 model run occurred. Historical security and licensing are closed; see the README [Security history](../SECURITY_HISTORY.md). See [current status](CURRENT_STATUS.md), [live evidence](LIVE_EVALUATION_REPORT.md) and [release scope](RELEASE_READINESS.md).
 
 | ID | Requirement | Status | Proof / boundary |
 | --- | --- | --- | --- |
