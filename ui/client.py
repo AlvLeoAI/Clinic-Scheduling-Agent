@@ -247,4 +247,10 @@ class ClinicApi:
             if error.code == "ALREADY_CONFIRMED" and "appointment" in error.body:
                 return Appointment.from_body(error.body["appointment"], already_confirmed=True)
             raise
-        return Appointment.from_body(response.json())
+        try:
+            return Appointment.from_body(response.json())
+        except (ValueError, KeyError, TypeError):
+            # A success status with an unreadable body: it may have booked.
+            unreadable = "The API returned an unexpected response."
+            status = response.status_code
+            raise ApiError(status, "UNEXPECTED_RESPONSE", unreadable, True, {}) from None

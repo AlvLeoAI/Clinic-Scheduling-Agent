@@ -17,8 +17,10 @@ from ui.confirmation import (
     action,
     blocked_by_unresolved,
     cards,
+    carry_over,
     confirm,
     flow_for,
+    uncertain_message,
 )
 
 pytestmark = pytest.mark.unit
@@ -38,8 +40,8 @@ def make_proposal(status="PENDING", ttl=timedelta(minutes=10)):
     )
 
 
-def error_body(code):
-    return {"error": {"code": code, "message": code, "retryable": False}, "trace_id": "t"}
+def error_body(code, retryable=False):
+    return {"error": {"code": code, "message": code, "retryable": retryable}, "trace_id": "t"}
 
 
 class SimulatedServer:
@@ -47,10 +49,15 @@ class SimulatedServer:
         self.proposal, self.now = proposal, NOW
         self.outcomes, self.keys, self.bookings = {}, [], 0
         self.drop_next_response = False
+        # Answered before the key is looked up, as an auth or server failure would be.
+        self.next_failure = None
 
     def handle(self, request):
         key = request.headers["Idempotency-Key"]
         self.keys.append(key)
+        if self.next_failure is not None:
+            response, self.next_failure = self.next_failure, None
+            return response
         if key not in self.outcomes:
             if self.now >= self.proposal.expires_at:
                 self.outcomes[key] = (410, error_body("PROPOSAL_EXPIRED"))
@@ -189,3 +196,86 @@ def test_an_earlier_proposal_that_was_never_sent_is_not_shown():
     flows = {}
     assert cards(proposals, flows, second.proposal_id) == [second]
     assert not blocked_by_unresolved(flows, second.proposal_id)
+
+
+def lose_first_response(proposal):
+    server, api, flows, keys = setup(proposal)
+    server.drop_next_response = True
+    assert confirm(api, TOKEN, proposal, flows, keys).state is ConfirmState.UNCERTAIN
+    return server, api, flows, keys
+
+
+def test_a_401_on_the_status_check_stays_uncertain_and_cannot_be_verified_here():
+    first, second = make_proposal(), make_proposal()
+    server, api, flows, keys = lose_first_response(first)
+    server.next_failure = httpx.Response(401, json=error_body("UNAUTHORIZED"))
+
+    flow = confirm(api, TOKEN, first, flows, keys)
+    assert flow.state is ConfirmState.UNCERTAIN and flow.unverifiable
+    assert server.bookings == 1, "the first request committed; nothing says otherwise"
+    message = uncertain_message(flow)
+    assert "session expired" in message and "may exist" in message
+    check = action(first, flow, NOW)
+    assert check.label == "Check booking status" and check.enabled is False
+    # The next proposal stays blocked while the outcome is unknown.
+    assert blocked_by_unresolved(flows, second.proposal_id)
+    assert action(second, flow_for(flows, second.proposal_id), NOW, blocked=True).enabled is False
+
+
+def test_a_structured_500_on_the_status_check_stays_uncertain_and_can_be_checked_again():
+    proposal = make_proposal()
+    server, api, flows, keys = lose_first_response(proposal)
+    server.next_failure = httpx.Response(500, json=error_body("INTERNAL_ERROR"))
+
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.UNCERTAIN and not flow.unverifiable
+    assert action(proposal, flow, NOW).enabled
+    assert "unknown" in uncertain_message(flow)
+
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.CONFIRMED and server.bookings == 1
+    assert len(set(server.keys)) == 1
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(409, json=error_body("SOMETHING_NEW")),
+        httpx.Response(404, json=error_body("PROPOSAL_NOT_FOUND")),
+        httpx.Response(502, text="<html>bad gateway</html>"),
+        httpx.Response(400, json={"detail": "not our envelope"}),
+        httpx.Response(201, json={"status": "CONFIRMED"}),
+    ],
+    ids=["unknown-code", "not-found", "html-502", "foreign-4xx", "malformed-201"],
+)
+def test_any_other_answer_leaves_the_outcome_unknown(response):
+    proposal = make_proposal()
+    server, api, flows, keys = lose_first_response(proposal)
+    server.next_failure = response
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.UNCERTAIN
+
+
+@pytest.mark.parametrize("code", ["PROPOSAL_EXPIRED", "PROPOSAL_SUPERSEDED", "SLOT_TAKEN"])
+def test_only_the_three_not_booked_codes_fail_the_card(code):
+    proposal = make_proposal()
+    server, api, flows, keys = lose_first_response(proposal)
+    server.next_failure = httpx.Response(409, json=error_body(code))
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.FAILED and action(proposal, flow, NOW) is None
+
+
+def test_a_new_session_keeps_only_unresolved_cards_and_marks_them_unverifiable():
+    sent, booked, idle = make_proposal(), make_proposal(), make_proposal()
+    flows = {
+        str(sent.proposal_id): Flow(state=ConfirmState.UNCERTAIN),
+        str(booked.proposal_id): Flow(state=ConfirmState.CONFIRMED),
+    }
+    proposals = {str(p.proposal_id): p for p in (sent, booked, idle)}
+    keys = {str(sent.proposal_id): "k1", str(booked.proposal_id): "k2"}
+
+    flows, proposals, keys = carry_over(flows, proposals, keys)
+    assert list(flows) == list(proposals) == list(keys) == [str(sent.proposal_id)]
+    flow = flows[str(sent.proposal_id)]
+    assert flow.unverifiable and action(sent, flow, NOW).enabled is False
+    assert blocked_by_unresolved(flows, idle.proposal_id)

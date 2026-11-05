@@ -8,6 +8,11 @@ looks at the proposal's TTL or status, so the check works after expiry and books
 A newer proposal does not hide an earlier card that was sent: an unresolved one stays
 visible with its own key, and the newer proposal cannot be confirmed until it resolves.
 The server supersedes only PENDING proposals, so a committed confirm is never undone.
+
+Only three answers prove that a key did not book: PROPOSAL_EXPIRED, PROPOSAL_SUPERSEDED
+and SLOT_TAKEN (the server stores them under the key, so a retry returns them again).
+Every other error, including 401, 500, unknown codes and malformed bodies, leaves the
+outcome unknown.
 """
 
 from collections.abc import Mapping, MutableMapping
@@ -21,6 +26,8 @@ from ui.client import ApiError, Appointment, Proposal, confirmation_key
 
 # A new key cannot book these; only an uncertain confirm may still be checked.
 CLOSED_STATUSES = frozenset({"SUPERSEDED", "EXPIRED"})
+# The only answers that prove this key booked nothing.
+NOT_BOOKED_CODES = frozenset({"PROPOSAL_EXPIRED", "PROPOSAL_SUPERSEDED", "SLOT_TAKEN"})
 
 
 class ConfirmState(StrEnum):
@@ -40,6 +47,13 @@ class Flow:
     state: ConfirmState = ConfirmState.PENDING
     appointment: Appointment | None = None
     error: ApiError | None = None
+    # The bearer that sent the confirm was replaced, so no request can check it now.
+    session_lost: bool = False
+
+    @property
+    def unverifiable(self) -> bool:
+        expired = self.error is not None and self.error.status == 401
+        return self.state in UNRESOLVED and (expired or self.session_lost)
 
 
 @dataclass(frozen=True)
@@ -73,9 +87,9 @@ def confirm(
     try:
         flow.appointment = api.confirm(token, proposal.proposal_id, key)
     except ApiError as error:
-        # Retryable means the request may have committed: unreachable, timeout or 503.
         flow.error = error
-        flow.state = ConfirmState.UNCERTAIN if error.retryable else ConfirmState.FAILED
+        not_booked = error.code in NOT_BOOKED_CODES
+        flow.state = ConfirmState.FAILED if not_booked else ConfirmState.UNCERTAIN
         return flow
     flow.state = ConfirmState.CONFIRMED
     return flow
@@ -98,6 +112,24 @@ def cards(
     return shown + [proposals[str(latest)]]
 
 
+def carry_over(
+    flows: Mapping[str, Flow], proposals: Mapping[str, Proposal], keys: Mapping[str, str]
+) -> tuple[dict[str, Flow], dict[str, Proposal], dict[str, str]]:
+    """What a new session keeps from the old one: only its unresolved confirmations.
+
+    Their cards stay visible and keep blocking new confirms, but the old bearer is gone,
+    so they can no longer be checked from this page.
+    """
+    kept = {key: flow for key, flow in flows.items() if flow.state in UNRESOLVED}
+    for flow in kept.values():
+        flow.session_lost = True
+    return (
+        kept,
+        {key: proposals[key] for key in kept if key in proposals},
+        {key: keys[key] for key in kept if key in keys},
+    )
+
+
 def blocked_by_unresolved(flows: Mapping[str, Flow], proposal_id: UUID) -> bool:
     return any(key != str(proposal_id) and f.state in UNRESOLVED for key, f in flows.items())
 
@@ -106,8 +138,20 @@ def action(
     proposal: Proposal, flow: Flow, now: datetime, *, blocked: bool = False
 ) -> Action | None:
     if flow.state in UNRESOLVED:
-        return Action("Check booking status", enabled=True)
+        return Action("Check booking status", enabled=not flow.unverifiable)
     if flow.state is ConfirmState.PENDING:
         open_ = proposal.status not in CLOSED_STATUSES and proposal.seconds_left(now) > 0
         return Action("Confirm booking", enabled=open_ and not blocked)
     return None
+
+
+def uncertain_message(flow: Flow) -> str:
+    if flow.unverifiable:
+        return (
+            "The booking outcome cannot be verified from this page: the session expired. "
+            "The booking may exist."
+        )
+    return (
+        "The booking outcome is unknown: the request may have reached the clinic. "
+        "Check its status; this cannot book twice."
+    )
