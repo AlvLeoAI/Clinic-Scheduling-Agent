@@ -4,9 +4,13 @@ A confirm whose response is lost may still have booked. That outcome is UNCERTAI
 failed: the card then offers "Check booking status", which resends the confirm with the
 same Idempotency-Key. The server answers a known key with the stored outcome before it
 looks at the proposal's TTL or status, so the check works after expiry and books once.
+
+A newer proposal does not hide an earlier card that was sent: an unresolved one stays
+visible with its own key, and the newer proposal cannot be confirmed until it resolves.
+The server supersedes only PENDING proposals, so a committed confirm is never undone.
 """
 
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -25,6 +29,10 @@ class ConfirmState(StrEnum):
     UNCERTAIN = "uncertain"
     CONFIRMED = "confirmed"
     FAILED = "failed"
+
+
+# The request may have committed and nobody has seen the outcome yet.
+UNRESOLVED = frozenset({ConfirmState.CONFIRMING, ConfirmState.UNCERTAIN})
 
 
 @dataclass
@@ -73,10 +81,33 @@ def confirm(
     return flow
 
 
-def action(proposal: Proposal, flow: Flow, now: datetime) -> Action | None:
-    if flow.state in (ConfirmState.CONFIRMING, ConfirmState.UNCERTAIN):
+def cards(
+    proposals: Mapping[str, Proposal], flows: MutableMapping[str, Flow], latest: UUID
+) -> list[Proposal]:
+    """Cards to show, oldest first: every earlier proposal that was sent, then the latest.
+
+    An earlier proposal that was never sent was superseded and is dropped; one that was
+    sent keeps its card (and its button, while unresolved) whatever came after it.
+    """
+    shown = [
+        proposal
+        for key, proposal in proposals.items()
+        if key != str(latest)
+        and flow_for(flows, proposal.proposal_id).state is not ConfirmState.PENDING
+    ]
+    return shown + [proposals[str(latest)]]
+
+
+def blocked_by_unresolved(flows: Mapping[str, Flow], proposal_id: UUID) -> bool:
+    return any(key != str(proposal_id) and f.state in UNRESOLVED for key, f in flows.items())
+
+
+def action(
+    proposal: Proposal, flow: Flow, now: datetime, *, blocked: bool = False
+) -> Action | None:
+    if flow.state in UNRESOLVED:
         return Action("Check booking status", enabled=True)
     if flow.state is ConfirmState.PENDING:
         open_ = proposal.status not in CLOSED_STATUSES and proposal.seconds_left(now) > 0
-        return Action("Confirm booking", enabled=open_)
+        return Action("Confirm booking", enabled=open_ and not blocked)
     return None

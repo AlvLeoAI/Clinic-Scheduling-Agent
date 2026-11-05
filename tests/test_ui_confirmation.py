@@ -11,7 +11,15 @@ import httpx
 import pytest
 
 from ui.client import ClinicApi, Proposal
-from ui.confirmation import ConfirmState, Flow, action, confirm, flow_for
+from ui.confirmation import (
+    ConfirmState,
+    Flow,
+    action,
+    blocked_by_unresolved,
+    cards,
+    confirm,
+    flow_for,
+)
 
 pytestmark = pytest.mark.unit
 NOW = datetime(2030, 1, 7, 15, tzinfo=UTC)
@@ -140,3 +148,44 @@ def test_a_confirm_interrupted_mid_request_is_treated_as_uncertain():
     proposal = make_proposal()
     flows = {str(proposal.proposal_id): Flow(state=ConfirmState.CONFIRMING)}
     assert flow_for(flows, proposal.proposal_id).state is ConfirmState.UNCERTAIN
+
+
+def test_a_new_proposal_keeps_the_uncertain_card_and_its_key():
+    first, second = make_proposal(), make_proposal()
+    server, api, flows, keys = setup(first)
+    server.drop_next_response = True
+    assert confirm(api, TOKEN, first, flows, keys).state is ConfirmState.UNCERTAIN
+    key = keys[str(first.proposal_id)]
+
+    # The agent proposes again; the uncertain card stays above the new one.
+    proposals = {str(first.proposal_id): first, str(second.proposal_id): second}
+    assert cards(proposals, flows, second.proposal_id) == [first, second]
+    check = action(first, flows[str(first.proposal_id)], NOW)
+    assert check.label == "Check booking status" and check.enabled
+
+    # The new proposal cannot be confirmed while the earlier outcome is unknown.
+    assert blocked_by_unresolved(flows, second.proposal_id)
+    new = action(second, flow_for(flows, second.proposal_id), NOW, blocked=True)
+    assert new.label == "Confirm booking" and new.enabled is False
+
+    # Checking resends the original key and returns the original booking.
+    flow = confirm(api, TOKEN, first, flows, keys)
+    assert flow.state is ConfirmState.CONFIRMED and server.bookings == 1
+    assert keys[str(first.proposal_id)] == key and set(server.keys) == {key}
+    assert not blocked_by_unresolved(flows, second.proposal_id)
+    assert cards(proposals, flows, second.proposal_id) == [first, second]
+
+
+def test_a_confirm_cut_off_mid_request_also_blocks_the_new_proposal():
+    first, second = make_proposal(), make_proposal()
+    flows = {str(first.proposal_id): Flow(state=ConfirmState.CONFIRMING)}
+    assert blocked_by_unresolved(flows, second.proposal_id)
+    assert not blocked_by_unresolved(flows, first.proposal_id)
+
+
+def test_an_earlier_proposal_that_was_never_sent_is_not_shown():
+    first, second = make_proposal(), make_proposal()
+    proposals = {str(first.proposal_id): first, str(second.proposal_id): second}
+    flows = {}
+    assert cards(proposals, flows, second.proposal_id) == [second]
+    assert not blocked_by_unresolved(flows, second.proposal_id)
