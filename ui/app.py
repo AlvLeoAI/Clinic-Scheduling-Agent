@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 import streamlit as st
 
+from ui.availability import SlotQuery, cached_slots
 from ui.client import ApiError, ClinicApi, Proposal
 from ui.confirmation import ConfirmState, action, blocked_by_unresolved, cards, flow_for
 from ui.confirmation import confirm as confirm_proposal
@@ -153,15 +154,17 @@ def demo_controls(catalog, info) -> None:
         min_value=first,
         max_value=today + timedelta(days=info.max_horizon_days),
     )
+    query = SlotQuery(day, practitioner.id, kind.id)
     if st.button("Check availability"):
         send(f"availability {day.isoformat()} {practitioner.id} {kind.id}")
         try:
-            state.slots = (day, api().availability(day, practitioner.id, kind.id))
+            state.slots = (query, api().availability(day, practitioner.id, kind.id))
         except ApiError as error:
             state.error = error
         st.rerun()
-    slots_day, slots = state.get("slots", (None, []))
-    if slots_day == day:
+    # Slots fetched for another date, practitioner or type are not shown.
+    slots = cached_slots(state.get("slots"), query)
+    if slots is not None:
         if not slots:
             st.info("No free slots that day (the clinic is open 09:00–17:00 on weekdays).")
         else:
