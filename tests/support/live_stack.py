@@ -15,6 +15,7 @@ import json
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -62,7 +63,7 @@ class Clock:
 class LiveApi:
     """uvicorn in a thread. `restart()` serves a fresh app instance on the same port."""
 
-    def __init__(self, engine: Engine, clock: Clock):
+    def __init__(self, engine: Engine, clock: Callable[[], datetime]):
         self.engine, self.clock, self.port = engine, clock, 0
         self.server: uvicorn.Server | None = None
         self.thread: threading.Thread | None = None
@@ -107,12 +108,14 @@ class FaultProxy:
 
     - "lose_response": forward, let the API commit, then close without answering.
     - "block": close without forwarding; the API never sees the request.
-    `confirm_keys` lists the Idempotency-Key of every confirm that reached the API.
+    `confirm_keys` lists the Idempotency-Key of every confirm that reached the API, and
+    `session_ids` the sessions created through it (IDs only, never the bearer).
     """
 
     upstream: str
     fault: str | None = None
     confirm_keys: list[str] = field(default_factory=list)
+    session_ids: list[UUID] = field(default_factory=list)
     blocked: int = 0
     lost: int = 0
 
@@ -170,6 +173,8 @@ class FaultProxy:
             connection.close()
         if is_confirm:
             self.confirm_keys.append(handler.headers["Idempotency-Key"])
+        if handler.path == "/api/v1/sessions" and response.status == 201:
+            self.session_ids.append(UUID(json.loads(data)["session_id"]))
         if fault == "lose_response":
             self.lost += 1
             handler.close_connection = True

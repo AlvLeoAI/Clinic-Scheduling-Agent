@@ -1,0 +1,3 @@
+# Browser tests only (make browser-test); never installed by default CI or images.
+# Playwright is resolved two weeks back; everything else is the foundation lock.
+playwright
