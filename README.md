@@ -75,10 +75,12 @@ result with the same idempotency key.
 Every case is graded on three independent layers: the **raw model decision** (tool
 choice, arguments, reply plan), **backend state** (what PostgreSQL actually contains)
 and the **visible reply**. A safe rendered reply never earns credit for a wrong model
-decision. The offline suite has 25 scripted cases, including deliberate wrong
-decisions that the graders must catch.
+decision. The offline suite has 25 scripted cases and calls no model. Its committed result
+(raw layer 15 PASS, 9 FAIL, 1 NOT RUN; backend and visible 25 PASS) comes from scripted
+fixtures: the nine raw failures are deliberate negative controls that the graders must
+catch, not model errors. It shows that the graders work, not how a model behaves.
 
-Live results are smoke-level validation only. Eight runs against the `gpt-6-luna`
+Live results are separate evidence and smoke-level only. Eight runs against the `gpt-6-luna`
 alias (reasoning effort `none`) between 2026-10-21 and 2026-10-26 covered five
 scenarios: catalog lookup, natural-language availability, proposal creation, an
 ambiguous request and an attempted conversational confirmation. Two first runs
@@ -138,6 +140,8 @@ Release status: OPEN
 - [Project history](docs/history/): phase records, milestone evidence, superseded reports.
 
 All data is synthetic: fictitious clinicians and UUID identifiers. The CLI and the test
-suite use a fixed 2030 clock; the UI, `make serve` and the AWS demo use the real clock,
-so bookings there fall 1 to 90 days ahead of today.
+suite use a fixed 2030 clock (the service tests advance it); the browser tests, the UI,
+`make serve` and the AWS demo use the real clock, so bookings there fall 1 to 90 days
+ahead of today. Tests block real HTTP except the loopback-only service and browser
+tests ([testing](TESTING.md)).
 MIT licensed; dependencies keep their own licenses ([notices](THIRD_PARTY_NOTICES.md)).
