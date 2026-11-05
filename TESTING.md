@@ -20,6 +20,7 @@ PostgreSQL 16 service with live model access disabled.
 | `make stack-up` | Builds the API and UI images and starts the [container stack](#container-stack) in demo mode. |
 | `make stack-smoke` | Smoke-tests the running stack. |
 | `make stack-down` | Stops the stack and discards its database. |
+| `make browser-test` | Playwright recovery tests against the throwaway database (needs `make db-up`); see [browser tests](#browser-tests). |
 
 Two databases, two purposes:
 
@@ -229,6 +230,14 @@ keeps the session bearer in server-side Streamlit state, and has no database dri
   after the TTL and never books twice. A confirm interrupted mid-request is also
   uncertain. Confirm stays disabled for a proposal that is expired, superseded or past
   its TTL, unless its outcome is uncertain.
+- A newer proposal does not replace a card that was sent. Uncertain or confirming
+  cards stay above the latest proposal with their original keys, and the latest card's
+  Confirm is disabled, with a note that it does not cancel the earlier one, until they
+  resolve. If the earlier confirm had committed, the check shows that booking; if it
+  never reached the API, the newer proposal superseded it and the check says so.
+- The slot list is bound to the date, practitioner and appointment type it was fetched
+  for (`ui/availability.py`); changing any of them hides it until availability is
+  checked again.
 - `SLOT_TAKEN`, `PROPOSAL_EXPIRED`, `PROPOSAL_SUPERSEDED` and
   `AGENT_PROVIDER_DISABLED` get specific messages; a retryable 503 offers a retry that
   reuses the same `client_message_id`.
@@ -245,6 +254,33 @@ Recovery lasts only as long as the Streamlit session: the bearer and the keys li
 server-side `session_state`, so reloading the tab or restarting the UI task starts a
 new session, and an uncertain booking can no longer be checked from the UI. The CLI's
 restart recovery (its 0600 state file) does not apply to the UI.
+
+### Recovery through real sockets
+
+`tests/support/live_stack.py` is a test-only harness: the real app under uvicorn on
+`127.0.0.1`, the throwaway database, an adjustable clock, and a fault proxy that can
+lose a confirm's response after the API committed it or drop the request before it
+arrives. The app has no fault endpoint. `tests/test_recovery_service.py` (marker
+`service`, part of the default run) drives the UI's own client and confirmation logic
+through it: a request blocked before the API and retried with the same key, a lost
+response recovered after the proposal TTL, two sessions confirming one slot, and an API
+restart after commit. Each case can write a receipt (fault point, key reuse, recovered
+appointment, database counts; no bearers or keys) to `CLINIC_RECOVERY_EVIDENCE_DIR`.
+
+### Browser tests
+
+`tests/test_ui_browser.py` (marker `browser`, excluded from the default run) puts
+Chromium in front of the real Streamlit page, which reaches the API through the same
+proxy. It covers a lost response after commit, a new proposal while a confirmation is
+uncertain, and stale slots after a practitioner change. Run it locally with
+`make db-up browser-test db-down`, or manually in GitHub with the `browser.yml`
+workflow (`workflow_dispatch` only; about three minutes, most of it installing).
+
+`make browser-test` creates `.venv-browser` from `requirements-browser.lock` (the
+foundation pins plus Playwright, hash-pinned) and `.venv-ui` from the UI lock, then runs
+`playwright install --only-shell chromium`, a download of roughly 100 to 300 MB on
+first use. That browser binary is pinned only by the Playwright version, not by a
+hash.
 
 ## Container stack
 

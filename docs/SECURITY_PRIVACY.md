@@ -85,9 +85,11 @@ That is acceptable only in the mode it is deployed in:
 - The agent provider is `demo`, so no request reaches a paid model, and all data is
   synthetic.
 - The stack is applied for a demo and destroyed afterwards, not left running.
-- Compute is one fixed-size task per service with no autoscaling, so traffic cannot
-  multiply the bill; the CloudFront free tier covers demo traffic, and the owner
-  watches spend with budgets in the AWS console.
+- Compute is one fixed-size task per service with no autoscaling. That caps the
+  Fargate charge only: CloudFront requests and data transfer beyond the free tier, load
+  balancer capacity units, CloudWatch log ingestion and database storage still grow
+  with traffic, and nothing rate-limits the public UI. Console budgets alert but do
+  not stop spend; the real limit is that the stack is destroyed the same day.
 - The API has no public route, and its Swagger UI, ReDoc and OpenAPI document are
   turned off (`API_DOCS_ENABLED=false`).
 
@@ -137,7 +139,9 @@ Remaining network exposure, by design:
   discards them, so a confirmation whose outcome was uncertain can no longer be checked
   from the UI. The booking itself is safe either way (one key books at most once), but
   the user cannot learn its outcome there. The CLI's recovery path, which reloads its
-  key from the 0600 file after a restart, does not transfer to the UI.
+  key from the 0600 file after a restart, does not transfer to the UI. Within one
+  session, a newer proposal does not hide an uncertain card: it stays visible with its
+  original key, and the newer proposal cannot be confirmed until it resolves.
 
 ## Logging and errors
 
@@ -179,8 +183,10 @@ checked separately with gitleaks (see the README). Tests block all real HTTP.
 - **Stale-intent ordering is conservative.** Older unfinished turns that cannot prove
   their order relative to existing proposals are rejected, which can require a fresh
   message for a request that might have been legitimate.
-- **Dependencies are version-pinned, not hash-pinned.** Pins alone do not authenticate
-  downloaded artifacts.
+- **Dependency pinning has gaps outside pip.** Every Python lock carries SHA-256
+  hashes and is installed with `--require-hashes`, and base images are pinned by
+  digest. The Chromium binary used by the optional browser tests is pinned only by the
+  Playwright version that downloads it.
 - **Privileged SQL bypasses service rules.** Policy and immutability are enforced in
   services and constraints, not by triggers on every field.
 - **Demo deployments only.** Loopback examples, local databases and the container

@@ -40,9 +40,7 @@ after ten minutes and do not hold the slot. See [system design](SYSTEM_DESIGN.md
 
 ## Demo
 
-<!-- GIF: docs/demo.gif (to be recorded) -->
-
-Live demo: coming soon. To run the full stack locally (Docker only, no API key):
+Run the full stack locally (Docker only, no API key):
 
 ```bash
 make stack-up     # PostgreSQL, one-off migrate+seed, API and Streamlit UI, demo provider
@@ -55,9 +53,10 @@ the separate **Confirm** button books it. The API is on `http://127.0.0.1:18000/
 and `make stack-smoke` checks the running stack. The scripted CLI demo in the
 quickstart below shows the same flow without containers.
 
-The same images deploy to an AWS sandbox (CloudFront, ECS Fargate on arm64, RDS
-PostgreSQL) with Terraform and a manual GitHub OIDC workflow. It is applied for demos
-and destroyed afterwards; see [AWS deployment](SYSTEM_DESIGN.md#aws-deployment).
+The AWS deployment is ephemeral. The same images deploy to an AWS sandbox (CloudFront,
+ECS Fargate on arm64, RDS PostgreSQL) with Terraform and a manual GitHub OIDC workflow;
+it is applied on demand for demonstrations and destroyed the same day, so there is no
+standing public URL. See [AWS deployment](SYSTEM_DESIGN.md#aws-deployment).
 
 ## Three guarantees
 
@@ -138,5 +137,7 @@ Release status: OPEN
 - [Security and privacy](docs/SECURITY_PRIVACY.md): controls, limitations, licensing.
 - [Project history](docs/history/): phase records, milestone evidence, superseded reports.
 
-All data is synthetic: fictitious clinicians, UUID identifiers and fixed 2030 dates.
+All data is synthetic: fictitious clinicians and UUID identifiers. The CLI and the test
+suite use a fixed 2030 clock; the UI, `make serve` and the AWS demo use the real clock,
+so bookings there fall 1 to 90 days ahead of today.
 MIT licensed; dependencies keep their own licenses ([notices](THIRD_PARTY_NOTICES.md)).
