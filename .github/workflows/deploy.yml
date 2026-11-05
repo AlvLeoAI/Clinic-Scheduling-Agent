@@ -90,7 +90,8 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          jq . "$RUNNER_TEMP/deploy.json"
+          # Validate without printing: the configuration and the public URL stay out of logs.
+          jq -e 'type == "object"' "$RUNNER_TEMP/deploy.json" >/dev/null
           echo "ready=true" >> "$GITHUB_OUTPUT"
       # purge is registered last: the schedule runs the family's latest revision, so it
       # must never point at code from a release that failed a later step.
@@ -130,7 +131,7 @@ jobs:
               --query 'services[0].taskDefinition' --output text)
             test "$running" = "${pair#*=}" || { echo "${pair%%=*} rolled back to $running" >&2; exit 1; }
           done
-          echo "Deployed $IMAGE_TAG to $(jq -r .url "$cfg")"
+          echo "Deployed $IMAGE_TAG"
       # Inside the VPC, through Cloud Map: readiness, then one booking confirmed twice
       # with the same Idempotency-Key. Each run leaves one synthetic appointment.
       - name: Post-deploy smoke (one-off task)
