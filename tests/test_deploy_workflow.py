@@ -56,6 +56,19 @@ def test_purge_is_registered_only_after_migration_stable_services_and_smoke():
     assert "families.purge" in steps[purge][1]
 
 
+def test_the_workflow_never_prints_the_deploy_configuration_or_the_url():
+    text = WORKFLOW.read_text()
+    # No step reads the URL out of the configuration, so none can echo it.
+    assert not re.search(r"\.url\b", text)
+    assert "cloudfront.net" not in text and "set -x" not in text
+    # The configuration file is read only field by field or with its output discarded.
+    config = r'"?\$(?:RUNNER_TEMP/deploy\.json|cfg)"?'
+    for line in text.splitlines():
+        printed = re.search(rf"\b(?:cat|jq\s+(?:-\w+\s+)*['\"]?\.['\"]?)\s+{config}", line)
+        assert not printed or ">/dev/null" in line or "> " in line, line
+        assert not re.search(rf"\becho\b.*{config}", line), line
+
+
 def fake_aws(tmp_path: Path, script: str) -> dict[str, str]:
     if shutil.which("jq") is None:
         pytest.skip("jq is not installed")

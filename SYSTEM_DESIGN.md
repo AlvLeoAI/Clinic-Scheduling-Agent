@@ -152,7 +152,9 @@ browser --HTTPS--> CloudFront (*.cloudfront.net, HSTS) --VPC origin--> internal 
   order").
   Terraform creates the first revision of each family and ignores later ones on the
   services; the purge schedule names the family without a revision, so it runs the
-  latest. `terraform apply` and `destroy` are never run from CI.
+  latest. `terraform apply` and `destroy` are never run from CI. The workflow never
+  prints the deploy configuration or the public URL; the owner reads the URL locally
+  with `terraform output -raw url` in `infra/terraform/app`.
 
 ### First deployment
 
