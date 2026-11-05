@@ -10,7 +10,7 @@ PostgreSQL 16 service with live model access disabled.
 | --- | --- |
 | `make install` | Creates `.venv` and installs the pinned lock file. |
 | `make db-up` | Starts the throwaway test database (tmpfs, `127.0.0.1:15433`) and waits up to 30 s for `pg_isready`; fails if it is not ready. |
-| `make test` | Full suite with real HTTP blocked. |
+| `make test` | Full suite; real HTTP is blocked except the loopback-only `service` tests. |
 | `make demo` | Scripted CLI demo. |
 | `make lint` | Ruff lint and format check. |
 | `make ci` | Every CI step below, in order. |
@@ -78,7 +78,14 @@ Run the same steps locally, in order:
 ```
 
 - `-p tests.r2a_offline_guard` patches `httpx` so any real HTTP request fails the run;
-  fakes, `MockTransport` and the in-process `TestClient` still work.
+  fakes, `MockTransport` and the in-process `TestClient` still work. There are two
+  explicit exceptions, both on `127.0.0.1` only: the `service` tests (default run) send
+  HTTP over loopback sockets through a test transport that refuses any other host, and
+  the `browser` tests (excluded by default) run Chromium and Streamlit as separate
+  processes that the guard does not patch. Nothing in either reaches the internet.
+- The suite uses a fixed clock of 2030-01-07. The `service` tests start from it and
+  advance it; the `browser` tests use the real clock, because the Streamlit page
+  picks dates from today.
 - The one expected warning is Starlette's deprecation of `httpx` in its `TestClient`
   (it asks for the separate `httpx2` package). Switching would add a dependency and
   change what the offline guard patches, so it is deliberately left for later.
@@ -258,7 +265,8 @@ restart recovery (its 0600 state file) does not apply to the UI.
 ### Recovery through real sockets
 
 `tests/support/live_stack.py` is a test-only harness: the real app under uvicorn on
-`127.0.0.1`, the throwaway database, an adjustable clock, and a fault proxy that can
+`127.0.0.1`, the throwaway database, an adjustable clock (the fixed 2030 clock, or the
+real one for browser tests), and a fault proxy that can
 lose a confirm's response after the API committed it or drop the request before it
 arrives. The app has no fault endpoint. `tests/test_recovery_service.py` (marker
 `service`, part of the default run) drives the UI's own client and confirmation logic
@@ -271,7 +279,7 @@ appointment, database counts; no bearers or keys) to `CLINIC_RECOVERY_EVIDENCE_D
 
 `tests/test_ui_browser.py` (marker `browser`, excluded from the default run) puts
 Chromium in front of the real Streamlit page, which reaches the API through the same
-proxy. It covers a lost response after commit, a new proposal while a confirmation is
+proxy, on the real clock. It covers a lost response after commit, a new proposal while a confirmation is
 uncertain, and stale slots after a practitioner change. Run it locally with
 `make db-up browser-test db-down`, or manually in GitHub with the `browser.yml`
 workflow (`workflow_dispatch` only; about three minutes, most of it installing).

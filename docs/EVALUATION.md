@@ -33,7 +33,8 @@ reconciliation ([`docs/evidence/M5_agent_summary.md`](evidence/M5_agent_summary.
 generated under contract 1.2) records raw 15 PASS, 9 intentional FAIL and 1 NOT RUN
 (an injected provider error produces no decision); backend and visible 25 PASS each.
 `scripts/check_docs.py` verifies that reconciliation on every CI run. This measures the
-graders and the plumbing, not model quality.
+graders and the plumbing, not model quality: the counts come from scripted fixtures,
+no model is called, and they are separate from the [live smoke runs](#live-smoke-runs).
 
 CI runs the suite under contract 1.2 on every push:
 

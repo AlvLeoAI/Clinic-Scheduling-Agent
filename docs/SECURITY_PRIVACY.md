@@ -166,7 +166,9 @@ with `MockTransport` are listed explicitly. In a Git checkout it scans what `git
 would commit (tracked files plus untracked files that are not ignored) and the ignored
 regression ledgers under `docs/evidence/`, so local build output such as Terraform
 provider binaries does not fail it; without Git it walks the tree. It does not scan Git history; history was
-checked separately with gitleaks (see the README). Tests block all real HTTP.
+checked separately with gitleaks (see the README). Tests block real HTTP, with two
+explicit loopback-only exceptions: the `service` and `browser` tests (see
+[testing](../TESTING.md)).
 
 ## Known limitations
 
@@ -196,8 +198,10 @@ checked separately with gitleaks (see the README). Tests block all real HTTP.
 - **The UI is a demo client.** It has no login: whoever reaches it gets an anonymous
   session. It keeps the bearer token in server-side Streamlit state, hides error
   tracebacks and disables usage statistics.
-- **Live model evidence is smoke-level.** See [evaluation](EVALUATION.md); offline
-  counts are not model reliability evidence.
+- **Live model evidence is smoke-level.** See [evaluation](EVALUATION.md). The
+  offline raw-layer counts (15 PASS, 9 FAIL, 1 NOT RUN) come from scripted fixtures
+  whose nine failures are deliberate negative controls; they are separate from the
+  live smoke runs and are not model reliability evidence.
 
 ## Licensing
 
