@@ -31,6 +31,7 @@ sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = [pytest.mark.browser, pytest.mark.postgres]
 ROOT = Path(__file__).resolve().parents[1]
 ZONE = ZoneInfo("America/Chicago")
+STARTUP_TIMEOUT_MS = 30_000
 UUID_TEXT = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 
@@ -86,7 +87,11 @@ def ui(engine):
             page = browser.new_page()
             page.set_default_timeout(20_000)
             page.goto(f"http://127.0.0.1:{port}/")
-            sync_api.expect(page.get_by_text("Agent provider:")).to_be_visible()
+            # The first render of a cold Streamlit process (imports, first script run,
+            # websocket) can exceed expect's 5 s default; later steps keep their limits.
+            sync_api.expect(page.get_by_text("Agent provider:")).to_be_visible(
+                timeout=STARTUP_TIMEOUT_MS
+            )
             yield SimpleNamespace(page=page, proxy=proxy, engine=engine)
             browser.close()
     finally:
