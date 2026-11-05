@@ -27,6 +27,7 @@ markers = [
   "api: authenticated and public HTTP contracts",
   "agent_offline: synthetic fake-provider agent, protocol or grader checks",
   "agent_live: reserved for separately authorized opt-in live evaluations",
+  "service: real app over loopback sockets with a test-only fault proxy; needs PostgreSQL",
 ]
 
 [tool.ruff]
