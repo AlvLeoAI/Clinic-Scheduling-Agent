@@ -20,9 +20,10 @@ from ui.confirmation import (
     cards,
     carry_over,
     flow_for,
+    send_confirm,
+    stale_notice,
     uncertain_message,
 )
-from ui.confirmation import confirm as confirm_proposal
 
 st.set_page_config(page_title="Clinic Scheduling Agent", page_icon="🗓️", layout="centered")
 state = st.session_state
@@ -48,7 +49,8 @@ def session_token() -> str:
         )
         for stale in ("proposal", "slots", "pending"):
             state.pop(stale, None)
-        state.token = api().create_session().token
+        session = api().create_session()
+        state.token, state.session_id, state.owners = session.token, session.session_id, {}
         state.confirm_keys, state.flows, state.log, state.proposals = keys, flows, [], proposals
         if proposals:
             state.proposal = list(proposals.values())[-1]
@@ -73,18 +75,18 @@ def send(message: str, message_id: UUID | None = None) -> None:
     if reply.proposal is not None:
         # Earlier proposals stay in `proposals`: one whose confirm was sent keeps its card.
         state.proposals[str(reply.proposal.proposal_id)] = reply.proposal
+        state.owners[str(reply.proposal.proposal_id)] = state.session_id
         state.proposal = reply.proposal
 
 
-def confirm(proposal: Proposal) -> None:
-    # Confirm and "Check booking status" both resend the proposal's one Idempotency-Key.
-    try:
-        token = session_token()
-    except ApiError as error:
-        state.error = error
-        return
-    flow = confirm_proposal(api(), token, proposal, state.flows, state.confirm_keys)
-    if flow.state is ConfirmState.FAILED:
+def confirm(proposal: Proposal, owner: UUID | None) -> None:
+    # Confirm and "Check booking status" both resend the proposal's one Idempotency-Key,
+    # and only with the bearer of `owner`, the session that received the proposal. This
+    # callback never starts a session: the button may predate a 401 or a replacement.
+    flow = send_confirm(api(), state, proposal, owner)
+    if flow is None:
+        state.notice = stale_notice(state.flows.get(str(proposal.proposal_id)))
+    elif flow.state is ConfirmState.FAILED:
         state.error = flow.error
 
 
@@ -138,7 +140,7 @@ def proposal_card(proposal: Proposal, names: dict[UUID, str], zone: ZoneInfo) ->
                 key=f"confirm-{proposal.proposal_id}",
                 type="primary",
                 on_click=confirm,
-                args=(proposal,),
+                args=(proposal, state.owners.get(str(proposal.proposal_id))),
                 disabled=not next_step.enabled,
             )
 
@@ -205,6 +207,8 @@ def main() -> None:
         return
     if error := state.pop("error", None):
         show_error(error)
+    if notice := state.pop("notice", None):
+        st.warning(notice)
     if pending := state.get("pending"):
         st.button("Retry", on_click=send, args=pending)
     for role, text in state.log:
