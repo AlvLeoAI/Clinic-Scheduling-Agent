@@ -337,3 +337,90 @@ def test_the_replacement_session_confirms_its_own_proposal():
     assert not blocked_by_unresolved(flows, fresh.proposal_id)
     flow = send_confirm(api, state, fresh, new)
     assert flow.state is ConfirmState.CONFIRMED and server.bookings == 1
+
+
+def appointment_with(proposal, **overrides):
+    body = SimulatedServer(proposal).appointment()
+    return {**body, **overrides}
+
+
+def incomplete_appointment(proposal):
+    body = appointment_with(proposal)
+    del body["starts_at"]
+    return body
+
+
+MALFORMED = {
+    "201-int-id": lambda p: httpx.Response(201, json=appointment_with(p, appointment_id=123)),
+    "201-bad-uuid": lambda p: httpx.Response(201, json=appointment_with(p, proposal_id="x")),
+    "201-null-time": lambda p: httpx.Response(201, json=appointment_with(p, ends_at=None)),
+    "201-not-json": lambda p: httpx.Response(201, text="{not json"),
+    "201-list": lambda p: httpx.Response(201, json=[]),
+    "409-already-confirmed-incomplete": lambda p: httpx.Response(
+        409, json={**error_body("ALREADY_CONFIRMED"), "appointment": incomplete_appointment(p)}
+    ),
+    "409-already-confirmed-not-object": lambda p: httpx.Response(
+        409, json={**error_body("ALREADY_CONFIRMED"), "appointment": "booked"}
+    ),
+    "409-already-confirmed-missing": lambda p: httpx.Response(
+        409, json=error_body("ALREADY_CONFIRMED")
+    ),
+    "500-list-code": lambda p: httpx.Response(
+        500, json={"error": {"code": [], "message": "x", "retryable": True}}
+    ),
+    "409-int-message": lambda p: httpx.Response(
+        409, json={"error": {"code": "SLOT_TAKEN", "message": 7}}
+    ),
+    "500-not-json": lambda p: httpx.Response(500, text="{not json"),
+    "500-list": lambda p: httpx.Response(500, json=[]),
+    "500-string-error": lambda p: httpx.Response(500, json={"error": "boom"}),
+}
+
+
+@pytest.mark.parametrize("make", MALFORMED.values(), ids=MALFORMED.keys())
+def test_a_malformed_answer_is_uncertain_keeps_its_key_and_recovers(make):
+    proposal = make_proposal()
+    server, api, flows, keys = lose_first_response(proposal)
+    key = keys[str(proposal.proposal_id)]
+    response = make(proposal)
+    server.next_failure = response
+
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.UNCERTAIN and flow.appointment is None
+    assert (flow.error.status, flow.error.code) == (response.status_code, "UNEXPECTED_RESPONSE")
+    assert keys[str(proposal.proposal_id)] == key
+    assert action(proposal, flow, NOW).enabled and not flow.unverifiable
+
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.CONFIRMED and server.bookings == 1
+    assert set(server.keys) == {key}
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(401, text="{not json"),
+        httpx.Response(401, json={"error": {"code": [], "message": "x"}}),
+        httpx.Response(401, json=[]),
+    ],
+    ids=["not-json", "list-code", "list"],
+)
+def test_a_malformed_401_is_uncertain_and_unverifiable(response):
+    proposal = make_proposal()
+    server, api, flows, keys = lose_first_response(proposal)
+    server.next_failure = response
+
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.UNCERTAIN and flow.unverifiable
+    assert (flow.error.status, flow.error.code) == (401, "UNEXPECTED_RESPONSE")
+    assert action(proposal, flow, NOW).enabled is False
+
+
+def test_a_valid_already_confirmed_answer_still_confirms():
+    proposal = make_proposal()
+    server, api, flows, keys = lose_first_response(proposal)
+    body = {**error_body("ALREADY_CONFIRMED"), "appointment": appointment_with(proposal)}
+    server.next_failure = httpx.Response(409, json=body)
+
+    flow = confirm(api, TOKEN, proposal, flows, keys)
+    assert flow.state is ConfirmState.CONFIRMED and flow.appointment.already_confirmed

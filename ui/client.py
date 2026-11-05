@@ -21,6 +21,16 @@ ERROR_MESSAGES = {
 }
 
 
+def _strings(value: object, *names: str) -> dict[str, str]:
+    """The named fields of a JSON object, each a string; ValueError for any other shape."""
+    if not isinstance(value, dict):
+        raise ValueError("expected a JSON object")
+    fields = {name: value.get(name) for name in names}
+    if not all(isinstance(field, str) for field in fields.values()):
+        raise ValueError(f"expected string fields {names}")
+    return fields
+
+
 class ApiError(Exception):
     def __init__(self, status: int, code: str, message: str, retryable: bool, body: dict):
         super().__init__(f"{status} {code}")
@@ -34,6 +44,12 @@ class ApiError(Exception):
         if self.retryable:
             return "The service is temporarily unavailable. Retry to resend the same request."
         return self.message
+
+
+def _unreadable_confirm(status: int) -> ApiError:
+    # A confirm answer that cannot be read: it may have booked, so it is never final.
+    unreadable = "The API returned an unexpected response."
+    return ApiError(status, "UNEXPECTED_RESPONSE", unreadable, True, {})
 
 
 @dataclass(frozen=True)
@@ -112,12 +128,14 @@ class Appointment:
     already_confirmed: bool = False
 
     @classmethod
-    def from_body(cls, body: dict, *, already_confirmed: bool = False) -> "Appointment":
+    def from_body(cls, body: object, *, already_confirmed: bool = False) -> "Appointment":
+        """Raises only ValueError, for a missing field or a wrong type or format."""
+        fields = _strings(body, "appointment_id", "proposal_id", "starts_at", "ends_at")
         return cls(
-            appointment_id=UUID(body["appointment_id"]),
-            proposal_id=UUID(body["proposal_id"]),
-            starts_at=datetime.fromisoformat(body["starts_at"]),
-            ends_at=datetime.fromisoformat(body["ends_at"]),
+            appointment_id=UUID(fields["appointment_id"]),
+            proposal_id=UUID(fields["proposal_id"]),
+            starts_at=datetime.fromisoformat(fields["starts_at"]),
+            ends_at=datetime.fromisoformat(fields["ends_at"]),
             already_confirmed=already_confirmed,
         )
 
@@ -159,17 +177,13 @@ class ClinicApi:
             unreachable = "The API could not be reached."
             raise ApiError(503, "API_UNREACHABLE", unreachable, True, {}) from None
         if response.status_code >= 400:
+            # The envelope is {"error": {"code": str, "message": str, "retryable": bool}};
+            # anything else (bad JSON included) is UNEXPECTED_RESPONSE with the same status.
             try:
                 body = response.json()
-                error = body["error"]
-                raise ApiError(
-                    response.status_code,
-                    error["code"],
-                    error["message"],
-                    bool(error.get("retryable")),
-                    body,
-                )
-            except (ValueError, KeyError, TypeError):
+                envelope = body.get("error") if isinstance(body, dict) else None
+                error = _strings(envelope, "code", "message")
+            except ValueError:
                 raise ApiError(
                     response.status_code,
                     "UNEXPECTED_RESPONSE",
@@ -177,6 +191,8 @@ class ClinicApi:
                     response.status_code >= 500,
                     {},
                 ) from None
+            retryable = envelope.get("retryable") is True
+            raise ApiError(response.status_code, error["code"], error["message"], retryable, body)
         return response
 
     def info(self) -> Info:
@@ -244,13 +260,15 @@ class ClinicApi:
                 json={},
             )
         except ApiError as error:
-            if error.code == "ALREADY_CONFIRMED" and "appointment" in error.body:
-                return Appointment.from_body(error.body["appointment"], already_confirmed=True)
-            raise
+            if error.code != "ALREADY_CONFIRMED":
+                raise
+            try:
+                appointment = error.body.get("appointment")
+                return Appointment.from_body(appointment, already_confirmed=True)
+            except ValueError:
+                raise _unreadable_confirm(error.status) from None
         try:
             return Appointment.from_body(response.json())
-        except (ValueError, KeyError, TypeError):
+        except ValueError:
             # A success status with an unreadable body: it may have booked.
-            unreadable = "The API returned an unexpected response."
-            status = response.status_code
-            raise ApiError(status, "UNEXPECTED_RESPONSE", unreadable, True, {}) from None
+            raise _unreadable_confirm(response.status_code) from None
