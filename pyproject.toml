@@ -20,7 +20,7 @@ test = ["pytest>=8,<10", "ruff>=0.9,<1"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "--strict-markers -m 'not agent_live'"
+addopts = "--strict-markers -m 'not agent_live and not browser'"
 markers = [
   "unit: deterministic checks without PostgreSQL or a real provider",
   "postgres: requires the isolated real PostgreSQL test database",
@@ -28,6 +28,7 @@ markers = [
   "agent_offline: synthetic fake-provider agent, protocol or grader checks",
   "agent_live: reserved for separately authorized opt-in live evaluations",
   "service: real app over loopback sockets with a test-only fault proxy; needs PostgreSQL",
+  "browser: Playwright against Streamlit and the live stack; run with make browser-test",
 ]
 
 [tool.ruff]

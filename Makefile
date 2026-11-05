@@ -23,7 +23,7 @@ RUN := env DATABASE_URL=$(DB_URL) TEST_DATABASE_URL=$(DB_URL) AGENT_PROVIDER=dis
 LINT_PATHS := app cli scripts alembic tests evaluations ui
 STACK := docker compose -f compose.demo.yaml
 
-.PHONY: help install db-up db-down test demo lint ci serve purge-chat stack-up stack-smoke stack-down
+.PHONY: help install db-up db-down test demo lint ci serve purge-chat stack-up stack-smoke stack-down browser-test
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
@@ -75,6 +75,15 @@ ci: lint ## Every CI step, in CI order
 	$(RUN) $(BIN)/python scripts/demo_concurrency.py --synthetic-only --evidence test-results/concurrency.json
 	$(RUN) $(BIN)/python -m cli --synthetic-only --scripted --evidence test-results/cli.json
 	$(RUN) $(BIN)/python -m scripts.check_docs
+
+browser-test: ## Playwright UI recovery tests (needs make db-up; downloads Chromium once)
+	test -x .venv-browser/bin/python || $(PYTHON) -m venv .venv-browser
+	.venv-browser/bin/pip install -q --require-hashes -r requirements-browser.lock
+	test -x .venv-ui/bin/python || $(PYTHON) -m venv .venv-ui
+	.venv-ui/bin/pip install -q --no-deps --require-hashes -r ui/requirements.lock
+	.venv-browser/bin/python -m playwright install --only-shell chromium
+	$(RUN) CLINIC_UI_PYTHON=.venv-ui/bin/python CLINIC_RECOVERY_EVIDENCE_DIR=test-results/recovery \
+		.venv-browser/bin/pytest -q -p tests.r2a_offline_guard -m browser
 
 serve: ## API on 127.0.0.1:8000 with the demo provider, using the THROWAWAY test database
 	@echo "serve uses the throwaway test database from 'make db-up' (127.0.0.1:$(PG_PORT));"

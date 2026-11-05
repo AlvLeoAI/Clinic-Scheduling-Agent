@@ -1,0 +1,58 @@
+name: Browser recovery tests (manual)
+
+# Manual only: Playwright drives the Streamlit UI against the real app and a throwaway
+# PostgreSQL, with a test-only fault proxy between them. Not part of push or PR CI.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+        env:
+          POSTGRES_USER: clinic_demo
+          POSTGRES_PASSWORD: ci-synthetic-only
+          POSTGRES_DB: clinic_scheduling_test
+        ports:
+          - 127.0.0.1:15433:5432
+        options: >-
+          --health-cmd "pg_isready -U clinic_demo -d clinic_scheduling_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:15433/clinic_scheduling_test
+      TEST_DATABASE_URL: postgresql+psycopg://clinic_demo:ci-synthetic-only@127.0.0.1:15433/clinic_scheduling_test
+      AGENT_PROVIDER: 'disabled'
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: ''
+      CLINIC_BOOKING_EVIDENCE_FILE: M6_booking_regression_cases.json
+      CLINIC_AGENT_EVIDENCE_FILE: M6_m4_regression_cases.json
+      CLINIC_UI_PYTHON: .venv-ui/bin/python
+      CLINIC_RECOVERY_EVIDENCE_DIR: test-results/recovery
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12.3'
+      - name: Install the hashed browser-test and UI locks
+        run: |
+          python -m venv .venv-browser
+          .venv-browser/bin/python -m pip install --require-hashes -r requirements-browser.lock
+          python -m venv .venv-ui
+          .venv-ui/bin/python -m pip install --no-deps --require-hashes -r ui/requirements.lock
+      - name: Install Chromium (pinned by the Playwright version only)
+        run: .venv-browser/bin/python -m playwright install --with-deps --only-shell chromium
+      - name: Migrate the throwaway database
+        run: .venv-browser/bin/alembic upgrade head
+      - name: Browser and service recovery tests
+        run: .venv-browser/bin/pytest -q -p tests.r2a_offline_guard -m "browser or service"
+      - name: Recovery receipts (no bearers or keys)
+        if: always()
+        run: cat test-results/recovery/*.json 2>/dev/null || echo "no receipts"

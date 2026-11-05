@@ -31,16 +31,21 @@ LOCKS = [
     "requirements-runtime.lock",
     "ui/requirements.lock",
     "infra/tools/checkov.lock",
+    "requirements-browser.lock",
 ]
 # Every command that installs one of the locks, and the lock it installs.
-INSTALLS = {
-    "Dockerfile": "requirements-runtime.lock",
-    "ui/Dockerfile": "requirements.lock",
-    "Makefile": "requirements-foundation.lock",
-    ".github/workflows/ci.yml": "requirements-foundation.lock",
-    ".github/workflows/infra.yml": "infra/tools/checkov.lock",
-    "scripts/reproduce_local.py": "requirements-foundation.lock",
-}
+INSTALLS = [
+    ("Dockerfile", "requirements-runtime.lock"),
+    ("ui/Dockerfile", "requirements.lock"),
+    ("Makefile", "requirements-foundation.lock"),
+    ("Makefile", "requirements-browser.lock"),
+    ("Makefile", "ui/requirements.lock"),
+    (".github/workflows/ci.yml", "requirements-foundation.lock"),
+    (".github/workflows/infra.yml", "infra/tools/checkov.lock"),
+    (".github/workflows/browser.yml", "requirements-browser.lock"),
+    (".github/workflows/browser.yml", "ui/requirements.lock"),
+    ("scripts/reproduce_local.py", "requirements-foundation.lock"),
+]
 
 
 @pytest.mark.parametrize("lock", LOCKS)
@@ -52,7 +57,7 @@ def test_every_pin_in_a_lock_carries_a_hash(lock):
         assert re.search(r"--hash=sha256:[0-9a-f]{64}", entry), entry.splitlines()[0]
 
 
-@pytest.mark.parametrize(("path", "lock"), INSTALLS.items())
+@pytest.mark.parametrize(("path", "lock"), INSTALLS)
 def test_every_lock_install_requires_hashes(path, lock):
     text = (ROOT / path).read_text()
     lines = [line for line in text.splitlines() if lock in line and "install" in line]
