@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 import streamlit as st
 
 from ui.client import ApiError, ClinicApi, Proposal
-from ui.confirmation import ConfirmState, action, flow_for
+from ui.confirmation import ConfirmState, action, blocked_by_unresolved, cards, flow_for
 from ui.confirmation import confirm as confirm_proposal
 
 st.set_page_config(page_title="Clinic Scheduling Agent", page_icon="🗓️", layout="centered")
@@ -36,7 +36,7 @@ def session_token() -> str:
         for stale in ("proposal", "slots", "pending"):
             state.pop(stale, None)
         state.token = api().create_session().token
-        state.confirm_keys, state.flows, state.log = {}, {}, []
+        state.confirm_keys, state.flows, state.log, state.proposals = {}, {}, [], {}
     return state.token
 
 
@@ -56,6 +56,8 @@ def send(message: str, message_id: UUID | None = None) -> None:
     state.pop("pending", None)
     state.log.append(("assistant", reply.assistant_message))
     if reply.proposal is not None:
+        # Earlier proposals stay in `proposals`: one whose confirm was sent keeps its card.
+        state.proposals[str(reply.proposal.proposal_id)] = reply.proposal
         state.proposal = reply.proposal
 
 
@@ -101,17 +103,27 @@ def proposal_card(proposal: Proposal, names: dict[UUID, str], zone: ZoneInfo) ->
             note = " (it was already confirmed)" if appointment.already_confirmed else ""
             st.success(f"Booked{note}. Appointment {appointment.appointment_id}")
             return
+        if flow.state is ConfirmState.FAILED:
+            st.caption("Not booked.")
+            return
+        blocked = blocked_by_unresolved(state.flows, proposal.proposal_id)
         if flow.state is ConfirmState.UNCERTAIN:
             st.warning(
                 "The booking outcome is unknown: the request may have reached the clinic. "
                 "Check its status; this cannot book twice."
             )
         elif flow.state is ConfirmState.PENDING:
+            if blocked:
+                st.info(
+                    "An earlier confirmation is unresolved above. This proposal does not "
+                    "cancel it; check its status before confirming this one."
+                )
             countdown(proposal)
-        next_step = action(proposal, flow, datetime.now(UTC))
+        next_step = action(proposal, flow, datetime.now(UTC), blocked=blocked)
         if next_step is not None:
             st.button(
                 next_step.label,
+                key=f"confirm-{proposal.proposal_id}",
                 type="primary",
                 on_click=confirm,
                 args=(proposal,),
@@ -184,9 +196,10 @@ def main() -> None:
     for role, text in state.log:
         with st.chat_message(role):
             st.text(text)
-    if proposal := state.get("proposal"):
+    if latest := state.get("proposal"):
         names = {o.id: o.label for o in catalog.practitioners + catalog.appointment_types}
-        proposal_card(proposal, names, ZoneInfo(catalog.timezone))
+        for proposal in cards(state.proposals, state.flows, latest.proposal_id):
+            proposal_card(proposal, names, ZoneInfo(catalog.timezone))
     if info.agent_provider == "demo":
         demo_controls(catalog, info)
     elif message := st.chat_input("Ask about availability or a booking"):
