@@ -13,7 +13,15 @@ import streamlit as st
 
 from ui.availability import SlotQuery, cached_slots
 from ui.client import ApiError, ClinicApi, Proposal
-from ui.confirmation import ConfirmState, action, blocked_by_unresolved, cards, flow_for
+from ui.confirmation import (
+    ConfirmState,
+    action,
+    blocked_by_unresolved,
+    cards,
+    carry_over,
+    flow_for,
+    uncertain_message,
+)
 from ui.confirmation import confirm as confirm_proposal
 
 st.set_page_config(page_title="Clinic Scheduling Agent", page_icon="🗓️", layout="centered")
@@ -33,11 +41,17 @@ def show_error(error: ApiError) -> None:
 
 def session_token() -> str:
     if "token" not in state:
-        # A new session owns nothing yet: drop the previous session's proposal and keys.
+        # A new session owns nothing yet: drop the previous session's proposals and keys,
+        # except unresolved confirmations, which stay visible and keep blocking confirms.
+        flows, proposals, keys = carry_over(
+            state.get("flows", {}), state.get("proposals", {}), state.get("confirm_keys", {})
+        )
         for stale in ("proposal", "slots", "pending"):
             state.pop(stale, None)
         state.token = api().create_session().token
-        state.confirm_keys, state.flows, state.log, state.proposals = {}, {}, [], {}
+        state.confirm_keys, state.flows, state.log, state.proposals = keys, flows, [], proposals
+        if proposals:
+            state.proposal = list(proposals.values())[-1]
     return state.token
 
 
@@ -109,10 +123,7 @@ def proposal_card(proposal: Proposal, names: dict[UUID, str], zone: ZoneInfo) ->
             return
         blocked = blocked_by_unresolved(state.flows, proposal.proposal_id)
         if flow.state is ConfirmState.UNCERTAIN:
-            st.warning(
-                "The booking outcome is unknown: the request may have reached the clinic. "
-                "Check its status; this cannot book twice."
-            )
+            st.warning(uncertain_message(flow))
         elif flow.state is ConfirmState.PENDING:
             if blocked:
                 st.info(
