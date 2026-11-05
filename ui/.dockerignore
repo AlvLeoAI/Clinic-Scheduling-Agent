@@ -5,4 +5,5 @@
 !__init__.py
 !client.py
 !confirmation.py
+!availability.py
 !app.py
